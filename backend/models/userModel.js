@@ -22,6 +22,9 @@ const userSchema=new mongoose.Schema({
         required:true,
         unique:true,
     },
+    avatar: {
+    type: String,
+  },
     boards:[{
         type:mongoose.Schema.Types.ObjectId,
         ref:'Board',
