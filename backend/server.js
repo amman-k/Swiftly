@@ -4,10 +4,15 @@ import cors from 'cors';
 import http from 'http';
 import {Server} from 'socket.io';
 import connectDB from './config/db';
+import session from 'express-session';
+import passport  from 'passport';
+import configurePassport from './config/passport';
 
 dotenv.config();
 
 connectDB();
+
+configurePassport();
 
 const app=express();
 const PORT=process.env.PORT || 5000;
@@ -16,6 +21,24 @@ app.use(cors({
     origin:'http://localhost:5173',
     credentials:true,
 }));
+app.use(express.json());
+
+if(!process.env.SESSION_TICKET){
+    console.error("FATAL ERROR: SESSION_SECRET is not defined in the .env file.");
+    process.exit(1);
+}
+
+app.use(
+    session({
+        secret:process.env.SESSION_TICKET,
+        resave:false,
+        saveUninitialized:false,
+    })
+)
+
+app.use(passport.initialize());
+app.use(passport.session());
+
 
 const server = http.createServer(app);
 const io=new Server(server,{
