@@ -7,6 +7,8 @@ import connectDB from './config/db';
 import session from 'express-session';
 import passport  from 'passport';
 import configurePassport from './config/passport';
+import authRoutes from './routes/authRoutes';
+import boardRoutes from './routes/boardRoutes';
 
 dotenv.config();
 
@@ -54,6 +56,9 @@ io.on('connection',(socket)=>{
         console.log(`User with socket id ${socket.id} disconnected.`);
     });
 });
+
+app.use('/auth',authRoutes);
+app.use('/api/boards',boardRoutes);
 
 app.get('/',(req,res)=>{
     res.send("Api is running Successfully");
