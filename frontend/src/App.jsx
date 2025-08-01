@@ -1,35 +1,26 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from "react";
+import { BrowserRoutes, Route, Routes } from "react-router-dom";
 
-function App() {
-  const [count, setCount] = useState(0)
+const LandingPage = () => <h1 className="text-white text-3xl">Landing Page</h1>;
+const BoardsDashboard = () => (
+  <h1 className="text-white text-3xl">Boards Dashboard</h1>
+);
+const BoardView = () => (
+  <h1 className="text-white text-3xl">Single Board View</h1>
+);
+const LoginPage = () => <h1 className="text-white text-3xl">Login Page</h1>;
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+const App = () => {
+  <div className="bg-[#2E3944] min-h-screen">
+    <BrowserRoutes>
+      <Routes>
+        <Route path="/" element={<LandingPage />}></Route>
+        <Route path="/boards" element={<BoardsDashboard />}></Route>
+        <Route path="/boards/id:" element={<BoardView />}></Route>
+        <Route path="/login" element={<LoginPage />}></Route>
+      </Routes>
+    </BrowserRoutes>
+  </div>;
+};
 
-export default App
+export default App;
