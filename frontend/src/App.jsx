@@ -1,7 +1,8 @@
 import React from "react";
-import { BrowserRoutes, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import LandingPage from "./pages/LandingPage";
 
-const LandingPage = () => <h1 className="text-white text-3xl">Landing Page</h1>;
+
 const BoardsDashboard = () => (
   <h1 className="text-white text-3xl">Boards Dashboard</h1>
 );
@@ -10,17 +11,23 @@ const BoardView = () => (
 );
 const LoginPage = () => <h1 className="text-white text-3xl">Login Page</h1>;
 
-const App = () => {
-  <div className="bg-[#2E3944] min-h-screen">
-    <BrowserRoutes>
-      <Routes>
-        <Route path="/" element={<LandingPage />}></Route>
-        <Route path="/boards" element={<BoardsDashboard />}></Route>
-        <Route path="/boards/id:" element={<BoardView />}></Route>
-        <Route path="/login" element={<LoginPage />}></Route>
-      </Routes>
-    </BrowserRoutes>
-  </div>;
-};
+function App() {
+  return (
+    <div className="bg-[#2E3944] min-h-screen font-sans text-white">
+      <BrowserRouter>
+        <Routes>
+          {/* This now points to our full LandingPage.jsx component */}
+          <Route path="/" element={<LandingPage />} />
+          
+          <Route path="/boards" element={<BoardsDashboard />} />
+          <Route path="/board/:id" element={<BoardView />} />
+          <Route path="/login" element={<LoginPage />} />
+        </Routes>
+      </BrowserRouter>
+    </div>
+  );
+}
+
+
 
 export default App;
