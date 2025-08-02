@@ -1,5 +1,5 @@
-import Board from "../models/boardModel";
-import User from "../models/userModel";
+import Board from "../models/boardModel.js";
+import User from "../models/userModel.js";
 
 /**
  * @desc    Get all boards for the logged-in user
