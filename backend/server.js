@@ -3,12 +3,12 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import http from 'http';
 import {Server} from 'socket.io';
-import connectDB from './config/db';
+import connectDB from './config/db.js';
 import session from 'express-session';
 import passport  from 'passport';
-import configurePassport from './config/passport';
-import authRoutes from './routes/authRoutes';
-import boardRoutes from './routes/boardRoutes';
+import configurePassport from './config/passport.js';
+import authRoutes from './routes/authRoutes.js';
+import boardRoutes from './routes/boardRoutes.js';
 
 dotenv.config();
 
@@ -25,7 +25,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-if(!process.env.SESSION_TICKET){
+if(!process.env.SESSION_SECRET){
     console.error("FATAL ERROR: SESSION_SECRET is not defined in the .env file.");
     process.exit(1);
 }
