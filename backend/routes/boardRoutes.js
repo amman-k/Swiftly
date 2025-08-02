@@ -1,6 +1,6 @@
 import express from "express";
-import { getBoards, createBoard } from "../controllers/boardController";
-import { protect } from "../middlewares/authMiddleware";
+import { getBoards, createBoard } from "../controllers/boardController.js";
+import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
