@@ -1,9 +1,10 @@
 import express from "express";
-import { getBoards, createBoard } from "../controllers/boardController.js";
+import { getBoards, createBoard, getBoardById } from "../controllers/boardController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.route("/boards").get(protect, getBoards).post(protect, createBoard);
+router.route("/").get(protect, getBoards).post(protect, createBoard);
+router.route("/:id").get(protect,getBoardById);
 
 export default router;
