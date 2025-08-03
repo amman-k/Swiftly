@@ -9,6 +9,7 @@ import passport  from 'passport';
 import configurePassport from './config/passport.js';
 import authRoutes from './routes/authRoutes.js';
 import boardRoutes from './routes/boardRoutes.js';
+import listRoutes from './routes/listRoutes.js';
 
 dotenv.config();
 
@@ -59,6 +60,7 @@ io.on('connection',(socket)=>{
 
 app.use('/auth',authRoutes);
 app.use('/api/boards',boardRoutes);
+app.use('/api/lists',listRoutes);
 
 app.get('/',(req,res)=>{
     res.send("Api is running Successfully");
