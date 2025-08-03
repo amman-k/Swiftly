@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { FiLogOut, FiX } from 'react-icons/fi';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 
 const DashboardNavbar = ({ user }) => {
@@ -51,7 +52,7 @@ const CreateBoardModal = ({ isOpen, onClose, onCreate }) => {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -50, opacity: 0 }}
             className="bg-[#2E3944] rounded-lg p-8 shadow-xl w-full max-w-md relative"
-            onClick={(e) => e.stopPropagation()} 
+            onClick={(e) => e.stopPropagation()}
           >
             <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">
               <FiX size={24} />
@@ -79,8 +80,6 @@ const CreateBoardModal = ({ isOpen, onClose, onCreate }) => {
     </AnimatePresence>
   );
 };
-
-
 
 
 const BoardsDashboard = () => {
@@ -114,10 +113,9 @@ const BoardsDashboard = () => {
         { withCredentials: true }
       );
       setBoards(prevBoards => [...prevBoards, newBoard]);
-      setIsModalOpen(false); 
+      setIsModalOpen(false);
     } catch (err) {
       console.error('Error creating board:', err);
-      
     }
   };
 
@@ -143,9 +141,11 @@ const BoardsDashboard = () => {
           {!loading && !error && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {boards.map((board) => (
-                <div key={board._id} className="bg-[#D3D9D4] text-[#212A31] p-4 rounded-lg shadow-md hover:shadow-xl transition-shadow cursor-pointer">
-                  <h2 className="font-bold text-xl">{board.title}</h2>
-                </div>
+                <Link to={`/board/${board._id}`} key={board._id}>
+                  <div className="bg-[#D3D9D4] text-[#212A31] p-4 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer h-full">
+                    <h2 className="font-bold text-xl">{board.title}</h2>
+                  </div>
+                </Link>
               ))}
               <button 
                 onClick={() => setIsModalOpen(true)}
