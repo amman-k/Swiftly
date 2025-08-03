@@ -2,7 +2,7 @@ import React from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Navigate } from 'react-router-dom';
 
-const ProtectedRoutes = ({children}) => {
+const ProtectedRoute = ({children}) => {
     const [user,loading]=useAuth();
 
     if (loading){
@@ -14,4 +14,4 @@ const ProtectedRoutes = ({children}) => {
     return <Navigate to="/"></Navigate>
 }
 
-export default ProtectedRoutes
+export default ProtectedRoute
