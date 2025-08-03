@@ -4,10 +4,8 @@ import LandingPage from "./pages/LandingPage";
 import { AuthProvider } from "./context/AuthContext";
 import BoardsDashboard from "./pages/BoardsDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import BoardView from './pages/BoardView';
 
-const BoardView = () => (
-  <h1 className="text-white text-3xl">Single Board View</h1>
-);
 const LoginPage = () => <h1 className="text-white text-3xl">Login Page</h1>;
 
 function App() {
