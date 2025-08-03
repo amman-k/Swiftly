@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { FiLogOut } from 'react-icons/fi';
+import axios from "axios";
 
 const DashboardNavbar = ({ user }) => {
   return (
@@ -26,6 +27,27 @@ const DashboardNavbar = ({ user }) => {
 
 const BoardsDashboard = () => {
   const { user } = useAuth();
+  const [boards,setBoards]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState(null);
+
+  useEffect(()=>{
+    const fetchBoards=async ()=>{
+        try{
+            const {data}=await axios.get('http://localhost:5001/api/boards',{
+                withCredentials:true,
+            });
+            setBoards(data);
+        }catch(err){
+            console.error("Error fetching boards",err);
+            setError('Could not load your boards. Please try again later.');
+        }finally{
+            setLoading(false);
+        }
+    };
+    fetchBoards();
+  },[])
+
   if (!user) {
     return null;
   }
