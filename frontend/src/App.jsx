@@ -3,7 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import { AuthProvider } from "./context/AuthContext";
 import BoardsDashboard from "./pages/BoardsDashboard";
-import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedRoute from "./components/ProtectedRoutes";
 import BoardView from './pages/BoardView';
 
 const LoginPage = () => <h1 className="text-white text-3xl">Login Page</h1>;
