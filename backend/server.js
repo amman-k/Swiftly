@@ -68,9 +68,23 @@ const io = new Server(server, {
 
 io.on('connection', (socket) => {
     console.log(`A user connected with socket id: ${socket.id}`);
+    socket.on('joinBoard', (boardId) => {
+        socket.join(boardId);
+        console.log(`Socket ${socket.id} joined room ${boardId}`);
+    });
+    socket.on('leaveBoard', (boardId) => {
+        socket.leave(boardId);
+        console.log(`Socket ${socket.id} left room ${boardId}`);
+    });
+
     socket.on('disconnect', () => {
         console.log(`User with socket id ${socket.id} disconnected.`);
     });
+});
+
+app.use((req, res, next) => {
+    req.io = io;
+    next();
 });
 
 app.use('/auth', authRoutes);
