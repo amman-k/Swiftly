@@ -5,6 +5,71 @@ import { FiHome, FiX } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 
 
+const AddCardForm = ({ listId, onCardCreated }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState('');
+
+  const handleCreateCard = async (e) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setIsEditing(false);
+      return;
+    }
+
+    try {
+      const { data: newCard } = await axios.post('/api/cards', {
+        title,
+        listId,
+      });
+      onCardCreated(newCard, listId); 
+      setTitle('');
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error creating card:', error);
+    }
+  };
+
+  if (!isEditing) {
+    return (
+      <button
+        onClick={() => setIsEditing(true)}
+        className="w-full text-left text-gray-500 hover:text-gray-700 hover:bg-gray-300 p-2 rounded-md transition-colors"
+      >
+        + Add a card
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={handleCreateCard}>
+      <textarea
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Enter a title for this card..."
+        className="w-full p-2 rounded-md text-[#212A31] focus:outline-none focus:ring-2 focus:ring-[#124E66] resize-none"
+        autoFocus
+        onBlur={() => setIsEditing(false)} 
+      />
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          type="submit"
+          className="bg-[#124E66] hover:bg-opacity-80 text-white font-bold py-2 px-4 rounded-md transition-colors"
+        >
+          Add Card
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsEditing(false)}
+          className="text-gray-500 hover:text-gray-700"
+        >
+          <FiX size={24} />
+        </button>
+      </div>
+    </form>
+  );
+};
+
+
 const AddListForm = ({ boardId, onListCreated }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
@@ -71,8 +136,6 @@ const AddListForm = ({ boardId, onListCreated }) => {
   );
 };
 
-
-
 const BoardView = () => {
   const { id } = useParams();
   const [board, setBoard] = useState(null);
@@ -102,6 +165,17 @@ const BoardView = () => {
       ...prevBoard,
       lists: [...prevBoard.lists, newList]
     }));
+  };
+
+  const handleCardCreated = (newCard, listId) => {
+    const updatedLists = board.lists.map(list => {
+      if (list._id === listId) {
+        const cards = list.cards ? [...list.cards, newCard] : [newCard];
+        return { ...list, cards };
+      }
+      return list;
+    });
+    setBoard(prevBoard => ({ ...prevBoard, lists: updatedLists }));
   };
 
   const staggerContainer = {
@@ -158,14 +232,12 @@ const BoardView = () => {
             >
               <h2 className="font-bold text-[#212A31] p-3 border-b border-gray-500/50">{list.title}</h2>
               <div className="flex-grow p-3 space-y-3 overflow-y-auto">
-                {list.cards.map(card => (
+                {list.cards && list.cards.map(card => (
                   <div key={card._id} className="bg-white text-[#212A31] p-3 rounded-md shadow-sm hover:shadow-md transition-shadow cursor-pointer">
                     {card.title}
                   </div>
                 ))}
-                <button className="w-full text-left text-gray-500 hover:text-gray-700 hover:bg-gray-300 p-2 rounded-md transition-colors">
-                  + Add a card
-                </button>
+                <AddCardForm listId={list._id} onCardCreated={handleCardCreated} />
               </div>
             </motion.div>
           ))}
