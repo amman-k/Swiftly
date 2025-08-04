@@ -11,6 +11,7 @@ import configurePassport from './config/passport.js';
 import authRoutes from './routes/authRoutes.js';
 import boardRoutes from './routes/boardRoutes.js';
 import listRoutes from './routes/listRoutes.js';
+import cardRoutes from './routes/cardRoutes.js';
 
 dotenv.config();
 
@@ -75,6 +76,7 @@ io.on('connection', (socket) => {
 app.use('/auth', authRoutes);
 app.use('/api/boards', boardRoutes);
 app.use('/api/lists', listRoutes);
+app.use('/api/cards',cardRoutes);
 
 app.get('/', (req, res) => {
     res.send('Swiftly API is running...');
