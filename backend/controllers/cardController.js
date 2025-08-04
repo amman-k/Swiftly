@@ -32,4 +32,40 @@ const createCard = async (req, res) => {
   }
 };
 
-export { createCard };
+/**
+ * @desc    Move a card to a new list and/or position
+ * @route   PUT /api/cards/:id/move
+ * @access  Private
+ */
+
+const moveCard = async (req, res) => {
+  const { cardId } = req.params;
+  const { sourceListId, destListId, sourceIndex, destIndex } = req.body;
+
+  try {
+    const sourceList = await List.findById(sourceListId);
+    if (!sourceList) {
+      return res.status(404).json({ message: "Source list not found" });
+    }
+    const [movedCardId] = sourceList.cards.splice(sourceIndex, 1);
+    await sourceList.save();
+
+    const destList = await List.findById(destListId);
+    if (!destList)
+      return res.status(404).json({ message: "Destination list not found" });
+
+    destList.cards.splice(destIndex, 0, movedCardId);
+    await destList.save();
+
+    if (sourceListId !== destListId) {
+      await Card.findByIdAndUpdate(cardId, { list: destListId });
+    }
+
+    res.status(200).json({ message: "Card moved successfully." });
+  } catch (error) {
+    console.error("Error moving card:", error);
+    res.status(500).json({ message: "Server Error: Could not move card." });
+  }
+};
+
+export { createCard,moveCard };
