@@ -1,8 +1,77 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { FiHome } from 'react-icons/fi';
+import { FiHome, FiX } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+
+
+const AddListForm = ({ boardId, onListCreated }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState('');
+
+  const handleCreateList = async (e) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setIsEditing(false);
+      return;
+    }
+
+    try {
+      const { data: newList } = await axios.post('/api/lists', {
+        title,
+        boardId,
+      });
+      onListCreated(newList);
+      setTitle('');
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error creating list:', error);
+    }
+  };
+
+  if (!isEditing) {
+    return (
+      <motion.button
+        onClick={() => setIsEditing(true)}
+        className="w-full md:w-72 bg-white bg-opacity-10 hover:bg-opacity-20 text-white font-semibold p-3 rounded-lg transition-colors flex-shrink-0"
+      >
+        + Add another list
+      </motion.button>
+    );
+  }
+
+  return (
+    <div className="w-full md:w-72 bg-light-content/90 p-3 rounded-lg flex-shrink-0">
+      <form onSubmit={handleCreateList}>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Enter list title..."
+          className="w-full p-2 rounded-md text-[#212A31] focus:outline-none focus:ring-2 focus:ring-[#124E66]"
+          autoFocus
+        />
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            type="submit"
+            className="bg-[#124E66] hover:bg-opacity-80 text-white font-bold py-2 px-4 rounded-md transition-colors"
+          >
+            Add List
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsEditing(false)}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <FiX size={24} />
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+
 
 const BoardView = () => {
   const { id } = useParams();
@@ -16,9 +85,7 @@ const BoardView = () => {
     const fetchBoard = async () => {
       try {
         setLoading(true);
-        const { data } = await axios.get(`http://localhost:5001/api/boards/${id}`, {
-          withCredentials: true,
-        });
+        const { data } = await axios.get(`/api/boards/${id}`);
         setBoard(data);
       } catch (err) {
         console.error('Error fetching board:', err);
@@ -27,18 +94,19 @@ const BoardView = () => {
         setLoading(false);
       }
     };
-
     fetchBoard();
   }, [id]);
 
+  const handleListCreated = (newList) => {
+    setBoard(prevBoard => ({
+      ...prevBoard,
+      lists: [...prevBoard.lists, newList]
+    }));
+  };
+
   const staggerContainer = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
   };
 
   const fadeInUp = {
@@ -101,12 +169,9 @@ const BoardView = () => {
               </div>
             </motion.div>
           ))}
-          <motion.button 
-            variants={fadeInUp}
-            className="w-full md:w-72 bg-white bg-opacity-10 hover:bg-opacity-20 text-white font-semibold p-3 rounded-lg transition-colors flex-shrink-0"
-          >
-            + Add another list
-          </motion.button>
+          <motion.div variants={fadeInUp}>
+            <AddListForm boardId={id} onListCreated={handleListCreated} />
+          </motion.div>
         </motion.div>
       </main>
     </div>
