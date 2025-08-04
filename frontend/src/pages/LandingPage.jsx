@@ -137,7 +137,7 @@ const LandingPage = () => {
             variants={fadeIn} initial="hidden" animate="visible"
             className="text-4xl md:text-6xl font-extrabold leading-tight"
           >
-            Organize Your Projects, Seamlessly.
+            Organize Your Tasks, Seamlessly.
           </motion.h1>
           <motion.p 
              variants={fadeIn} initial="hidden" animate="visible" transition={{ delay: 0.2 }}
