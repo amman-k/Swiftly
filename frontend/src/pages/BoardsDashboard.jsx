@@ -15,7 +15,7 @@ const DashboardNavbar = ({ user }) => {
           <span className="text-white font-semibold">{user.name}</span>
           <img src={user.avatar} alt="User Avatar" className="w-10 h-10 rounded-full" />
           <a 
-            href="http://localhost:5001/auth/logout" 
+            href="/auth/logout" 
             className="flex items-center gap-2 text-gray-300 hover:text-white border border-gray-600 hover:bg-red-600 hover:border-red-600 font-semibold py-2 px-4 rounded transition-all duration-200"
           >
             <FiLogOut />
@@ -82,6 +82,7 @@ const CreateBoardModal = ({ isOpen, onClose, onCreate }) => {
 };
 
 
+
 const BoardsDashboard = () => {
   const { user } = useAuth();
   const [boards, setBoards] = useState([]);
@@ -92,9 +93,7 @@ const BoardsDashboard = () => {
   useEffect(() => {
     const fetchBoards = async () => {
       try {
-        const { data } = await axios.get('http://localhost:5001/api/boards', {
-          withCredentials: true,
-        });
+        const { data } = await axios.get('/api/boards');
         setBoards(data);
       } catch (err) {
         console.error('Error fetching boards:', err);
@@ -108,10 +107,7 @@ const BoardsDashboard = () => {
 
   const handleCreateBoard = async (title) => {
     try {
-      const { data: newBoard } = await axios.post('http://localhost:5001/api/boards', 
-        { title }, 
-        { withCredentials: true }
-      );
+      const { data: newBoard } = await axios.post('/api/boards', { title });
       setBoards(prevBoards => [...prevBoards, newBoard]);
       setIsModalOpen(false);
     } catch (err) {
