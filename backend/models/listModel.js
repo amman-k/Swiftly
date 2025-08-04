@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Board from "./boardModel";
+import Board from "./boardModel.js";
 
 const listSchema= new mongoose.Schema({
     title:{
