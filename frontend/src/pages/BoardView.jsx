@@ -83,12 +83,10 @@ const BoardView = () => {
     const socket = io('/');
     socket.emit('joinBoard', boardId);
 
-    // --- NEW: Listen for 'listCreated' event ---
     socket.on('listCreated', (newList) => {
       setBoard(prev => prev ? { ...prev, lists: [...prev.lists, newList] } : null);
     });
 
-    // --- NEW: Listen for 'cardCreated' event ---
     socket.on('cardCreated', ({ newCard, listId }) => {
       setBoard(prev => {
         if (!prev) return null;
@@ -121,6 +119,15 @@ const BoardView = () => {
                 }
                 return list;
             });
+            return { ...prev, lists: newLists };
+        });
+    });
+
+    socket.on('listsReordered', ({ orderedListIds }) => {
+        setBoard(prev => {
+            if (!prev) return null;
+            const listMap = new Map(prev.lists.map(list => [list._id, list]));
+            const newLists = orderedListIds.map(id => listMap.get(id));
             return { ...prev, lists: newLists };
         });
     });
