@@ -30,6 +30,8 @@ const createList = async (req, res) => {
     const savedList = await newList.save();
     board.lists.push(savedList._id);
     await board.save();
+    const listWithEmptyCards = { ...savedList.toObject(), cards: [] };
+    req.io.to(boardId).emit('listCreated', listWithEmptyCards);
     res.status(201).json(savedList);
   } catch (err) {
     console.error("Error creating list:", error);
