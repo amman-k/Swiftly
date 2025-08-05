@@ -5,7 +5,7 @@ import { FiHome, FiX } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { DndContext, useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-
+import io from 'socket.io-client';
 
 const Card = ({ card }) => {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -29,7 +29,6 @@ const Card = ({ card }) => {
   );
 };
 
-
 const List = ({ list, color, children }) => {
   const { setNodeRef } = useDroppable({
     id: list._id,
@@ -44,7 +43,6 @@ const List = ({ list, color, children }) => {
     </div>
   );
 };
-
 
 
 const AddCardForm = ({ listId, onCardCreated }) => {
@@ -127,19 +125,22 @@ const AddListForm = ({ boardId, onListCreated }) => {
   );
 };
 
+
 const BoardView = () => {
-  const { id } = useParams();
+  const { id: boardId } = useParams();
   const [board, setBoard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [socket, setSocket] = useState(null);
 
   const listColors = ['bg-light-content', 'bg-list-blue', 'bg-list-green'];
 
+  
   useEffect(() => {
     const fetchBoard = async () => {
       try {
         setLoading(true);
-        const { data } = await axios.get(`/api/boards/${id}`);
+        const { data } = await axios.get(`/api/boards/${boardId}`);
         setBoard(data);
       } catch (err) {
         setError('Could not load the board.');
@@ -148,7 +149,47 @@ const BoardView = () => {
       }
     };
     fetchBoard();
-  }, [id]);
+  }, [boardId]);
+
+  
+  useEffect(() => {
+    const newSocket = io('/');
+    setSocket(newSocket);
+
+    newSocket.emit('joinBoard', boardId);
+
+    newSocket.on('cardMoved', (moveData) => {
+        setBoard(prev => {
+            if (!prev) return null;
+            const { cardId, sourceListId, destListId, destIndex } = moveData;
+            
+            const sourceList = prev.lists.find(l => l._id === sourceListId);
+            if (!sourceList) return prev;
+
+            const cardToMove = sourceList.cards.find(c => c._id === cardId);
+            if (!cardToMove) return prev;
+
+            const newLists = prev.lists.map(list => {
+                if (list._id === sourceListId) {
+                    return { ...list, cards: list.cards.filter(c => c._id !== cardId) };
+                }
+                if (list._id === destListId) {
+                    const newCards = [...(list.cards || [])];
+                    newCards.splice(destIndex, 0, cardToMove);
+                    return { ...list, cards: newCards };
+                }
+                return list;
+            });
+            return { ...prev, lists: newLists };
+        });
+    });
+
+    return () => {
+        newSocket.emit('leaveBoard', boardId);
+        newSocket.disconnect();
+    };
+  }, [boardId]);
+
 
   const handleListCreated = (newList) => setBoard(prev => ({ ...prev, lists: [...prev.lists, newList] }));
   const handleCardCreated = (newCard, listId) => {
@@ -162,26 +203,23 @@ const BoardView = () => {
     setBoard(prev => ({ ...prev, lists: updatedLists }));
   };
 
-  
   const handleDragEnd = (event) => {
     const { active, over } = event;
-
-    if (!over) return;
+    if (!over || active.id === over.id) return;
 
     const activeCard = active.data.current.card;
     const sourceListId = activeCard.list;
     const destListId = over.id;
 
-    
     setBoard(prev => {
         const sourceList = prev.lists.find(l => l._id === sourceListId);
         const destList = prev.lists.find(l => l._id === destListId);
-
-      
-        const sourceCards = sourceList.cards.filter(c => c._id !== activeCard._id);
+        const sourceCards = [...sourceList.cards];
+        const destCards = sourceListId === destListId ? sourceCards : [...destList.cards];
         
-        
-        const destCards = [...(destList.cards || []), activeCard];
+        const [movedCard] = sourceCards.splice(sourceCards.findIndex(c => c._id === activeCard._id), 1);
+        movedCard.list = destListId;
+        destCards.push(movedCard);
         
         const newLists = prev.lists.map(l => {
             if (l._id === sourceListId) return { ...l, cards: sourceCards };
@@ -191,17 +229,17 @@ const BoardView = () => {
         return { ...prev, lists: newLists };
     });
 
+
     axios.put(`/api/cards/${activeCard._id}/move`, {
+        boardId,
         sourceListId,
         destListId,
         sourceIndex: board.lists.find(l => l._id === sourceListId).cards.findIndex(c => c._id === activeCard._id),
         destIndex: (board.lists.find(l => l._id === destListId).cards || []).length
     }).catch(err => {
         console.error("Failed to move card", err);
-      
     });
   };
-
 
   if (loading) return <div className="p-8 text-white">Loading board...</div>;
   if (error) return <div className="p-8 text-red-400">{error}</div>;
@@ -234,7 +272,7 @@ const BoardView = () => {
               </List>
             ))}
             <motion.div>
-              <AddListForm boardId={id} onListCreated={handleListCreated} />
+              <AddListForm boardId={boardId} onListCreated={handleListCreated} />
             </motion.div>
           </motion.div>
         </main>
