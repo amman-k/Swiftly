@@ -93,6 +93,7 @@ const reorderLists = async (req, res) => {
 
     board.lists = orderedListIds;
     await board.save();
+    req.io.to(boardId).emit('listsReordered', { orderedListIds });
     res.status(200).json({ message: "list rendered successfully" });
   } catch (error) {
     console.error("Error reordering lists:", error);
