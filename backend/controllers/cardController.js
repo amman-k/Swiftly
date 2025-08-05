@@ -25,6 +25,8 @@ const createCard = async (req, res) => {
 
     list.cards.push(savedCard._id);
     await list.save();
+    const boardId = list.board._id.toString();
+    req.io.to(boardId).emit("cardCreated", { newCard: savedCard, listId });
     res.status(201).json(savedCard);
   } catch (err) {
     console.error("Error creating card:", error);
@@ -60,8 +62,14 @@ const moveCard = async (req, res) => {
     if (sourceListId !== destListId) {
       await Card.findByIdAndUpdate(cardId, { list: destListId });
     }
-     const moveData = { cardId, sourceListId, destListId, sourceIndex, destIndex };
-        req.io.to(boardId).emit('cardMoved', moveData);
+    const moveData = {
+      cardId,
+      sourceListId,
+      destListId,
+      sourceIndex,
+      destIndex,
+    };
+    req.io.to(boardId).emit("cardMoved", moveData);
 
     res.status(200).json({ message: "Card moved successfully." });
   } catch (error) {
@@ -70,4 +78,4 @@ const moveCard = async (req, res) => {
   }
 };
 
-export { createCard,moveCard };
+export { createCard, moveCard };
