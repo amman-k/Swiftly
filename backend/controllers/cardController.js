@@ -60,6 +60,8 @@ const moveCard = async (req, res) => {
     if (sourceListId !== destListId) {
       await Card.findByIdAndUpdate(cardId, { list: destListId });
     }
+     const moveData = { cardId, sourceListId, destListId, sourceIndex, destIndex };
+        req.io.to(boardId).emit('cardMoved', moveData);
 
     res.status(200).json({ message: "Card moved successfully." });
   } catch (error) {
