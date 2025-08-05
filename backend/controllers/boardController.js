@@ -50,26 +50,54 @@ const createBoard = async (req, res) => {
  * @access  Private
  */
 
-const getBoardById= async (req,res)=>{
-  try{
-    const board= await Board.findById(req.params.id).populate({
-      path:'lists',
-      populate:{
-        path:'cards',
-        model:'Card'
-    }
+const getBoardById = async (req, res) => {
+  try {
+    const board = await Board.findById(req.params.id).populate({
+      path: "lists",
+      populate: {
+        path: "cards",
+        model: "Card",
+      },
     });
-    if (!board){
-      return res.status(404).json({message:"Board not found."});
+    if (!board) {
+      return res.status(404).json({ message: "Board not found." });
     }
-    if (board.owner.toString()!=req.user.id){
-      return res.status(401).json({message:'Not Authorized.'});
+    if (board.owner.toString() != req.user.id) {
+      return res.status(401).json({ message: "Not Authorized." });
     }
     res.status(200).json(board);
-  }catch(err){
+  } catch (err) {
     console.error(error);
-    res.status(500).json({ message: 'Server Error: Could not fetch board.' });
+    res.status(500).json({ message: "Server Error: Could not fetch board." });
   }
-}
+};
 
-export { getBoards, createBoard,getBoardById };
+/**
+ * @desc    Reorder the lists on a board
+ * @route   PUT /api/boards/:id/reorder-lists
+ * @access  Private
+ */
+
+const reorderLists = async (req, res) => {
+  const { boardId } = req.params;
+  const { orderedListIds } = req.body;
+
+  try {
+    const board = Board.findById(boardId);
+    if (!board) {
+      return res.status(404).json({ message: "Board not found" });
+    }
+    if (board.owner.toString() !== req.user.id) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    board.lists = orderedListIds;
+    await board.save();
+    res.status(200).json({ message: "list rendered successfully" });
+  } catch (error) {
+    console.error("Error reordering lists:", error);
+    res.status(500).json({ message: "Server Error: Could not reorder lists." });
+  }
+};
+
+export { getBoards, createBoard, getBoardById, reorderLists };
