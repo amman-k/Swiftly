@@ -6,40 +6,28 @@ import List from "../models/listModel.js";
  * @route   POST /api/cards
  * @access  Private
  */
+
 const createCard = async (req, res) => {
   const { title, listId } = req.body;
   if (!title || !listId) {
-    return res.status(400).json({ message: "Title and list ID are required." });
+    return res.status(400).json({ message: "Title and Id are required" });
   }
-
   try {
-    // First, create the new card document
-    const newCard = new Card({
+    const list = await List.findById(listId);
+    if (!list) {
+      res.status(404).json({ message: "list not found" });
+    }
+    const card = new Card({
       title,
       list: listId,
     });
-    const savedCard = await newCard.save();
+    const savedCard = await card.save();
 
-    // --- MODIFICATION START ---
-    // Atomically add the new card's ID to the corresponding list's `cards` array
-    const updatedList = await List.findByIdAndUpdate(
-      listId,
-      { $push: { cards: savedCard._id } },
-      { new: true } // This option is good practice but not strictly needed here
-    );
-
-    if (!updatedList) {
-      // If the list isn't found, we should probably delete the card we just created
-      // to avoid orphaned data. This is an example of a "rollback".
-      await Card.findByIdAndDelete(savedCard._id);
-      return res.status(404).json({ message: "List not found." });
-    }
-    // --- MODIFICATION END ---
-
-    // Use the board ID from the list we just updated
-    const boardId = updatedList.board.toString();
+    list.cards.push(savedCard._id);
+    await list.save();
+    
+    const boardId = list.board.toString();
     req.io.to(boardId).emit("cardCreated", { newCard: savedCard, listId });
-
     res.status(201).json(savedCard);
   } catch (error) {
     console.error("Error creating card:", error);
@@ -49,48 +37,54 @@ const createCard = async (req, res) => {
 
 /**
  * @desc    Move a card to a new list and/or position
- * @route   PUT /api/cards/:id/move
+ * @route   PUT /api/cards/:cardId/move
  * @access  Private
  */
+
 const moveCard = async (req, res) => {
-  // Use `id` from params to match your route `/api/cards/:id/move`
-  const { id: cardId } = req.params;
-  
-  // --- MODIFICATION: Added `boardId` to be read from the request body ---
+  const { cardId } = req.params;
   const { sourceListId, destListId, boardId } = req.body;
 
-  // Basic validation
-  if (!sourceListId || !destListId || !boardId) {
-      return res.status(400).json({ message: "Source list, destination list, and board ID are required." });
+  if (!cardId || !sourceListId || !destListId || !boardId) {
+    return res.status(400).json({ message: "Card ID, list IDs, and board ID are required." });
   }
 
   try {
-    // --- MODIFICATION START: Replaced find/splice/save with atomic updates ---
-    // Step 1: Atomically remove the card ID from the source list's `cards` array.
-    await List.findByIdAndUpdate(sourceListId, {
-      $pull: { cards: cardId },
-    });
+    // Step 1: Atomically remove the card's ID from the source list's 'cards' array.
+    const updatedSourceList = await List.findByIdAndUpdate(
+      sourceListId,
+      { $pull: { cards: cardId } },
+      { new: true }
+    );
 
-    // Step 2: Atomically add the card ID to the destination list's `cards` array.
-    // Note: We are just adding it. The exact ordering is handled by the `reorder-cards` endpoint.
-    await List.findByIdAndUpdate(destListId, {
-      $push: { cards: cardId },
-    });
-    // --- MODIFICATION END ---
-    
-    // Step 3: If the lists are different, update the `list` field on the card document itself.
+    // Step 2: Atomically add the card's ID to the destination list's 'cards' array.
+    const updatedDestList = await List.findByIdAndUpdate(
+      destListId,
+      { $push: { cards: cardId } },
+      { new: true }
+    );
+
+    // Step 3: Update the 'list' field on the Card document itself.
     if (sourceListId !== destListId) {
       await Card.findByIdAndUpdate(cardId, { list: destListId });
     }
 
-    // --- FIX: `boardId` is now defined and can be used for the socket broadcast ---
-    req.io.to(boardId).emit("cardMoved", {
-      cardId,
-      sourceListId,
-      destListId,
-      // You may not need to send back indices, as the frontend state is handled there.
-      // The socket event can just trigger a refetch or confirm the optimistic update.
-    });
+    // Step 4: Emit WebSocket events to update all clients.
+    const io = req.io;
+    if (io) {
+      if (updatedSourceList) {
+        io.to(boardId).emit("cardsReordered", {
+          listId: sourceListId,
+          orderedCardIds: updatedSourceList.cards.map(c => c.toString()),
+        });
+      }
+      if (updatedDestList) {
+        io.to(boardId).emit("cardsReordered", {
+          listId: destListId,
+          orderedCardIds: updatedDestList.cards.map(c => c.toString()),
+        });
+      }
+    }
 
     res.status(200).json({ message: "Card moved successfully." });
   } catch (error) {
