@@ -70,14 +70,16 @@ const reorderLists = async (req, res) => {
   const { orderedListIds } = req.body;
 
   try {
-    const board = await Board.findOne({ _id: boardId, owner: req.user.id });
 
-    if (!board) {
+    const updatedBoard = await Board.findOneAndUpdate(
+      { _id: boardId, owner: req.user.id }, 
+      { $set: { lists: orderedListIds } }, 
+      { new: true }
+    );
+
+    if (!updatedBoard) {
       return res.status(404).json({ message: 'Board not found or you are not authorized.' });
     }
-
-    board.lists = orderedListIds;
-    await board.save();
 
     req.io.to(boardId).emit('listsReordered', { orderedListIds });
 
