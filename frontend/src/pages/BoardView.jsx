@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { FiHome, FiX } from 'react-icons/fi';
+import { FiHome, FiX, FiEdit2 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { DndContext, useDraggable, useDroppable, closestCorners } from '@dnd-kit/core';
 import { SortableContext, useSortable, horizontalListSortingStrategy, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -28,9 +28,11 @@ const SortableCard = ({ card }) => {
 };
 
 // --- Sortable & Droppable List Component ---
-const SortableList = ({ list, color, children }) => {
+const SortableList = ({ list, color, children, onUpdateListTitle }) => {
   const { setNodeRef } = useDroppable({ id: list._id, data: { type: 'List', list } });
   const { attributes, listeners, setNodeRef: setSortableNodeRef, transform, transition, isDragging } = useSortable({ id: list._id, data: { type: 'List' } });
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [title, setTitle] = useState(list.title);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -38,12 +40,49 @@ const SortableList = ({ list, color, children }) => {
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const handleTitleBlur = () => {
+    if (title.trim() && title !== list.title) {
+      onUpdateListTitle(list._id, title);
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleTitleBlur();
+    } else if (e.key === 'Escape') {
+      setTitle(list.title);
+      setIsEditingTitle(false);
+    }
+  };
+
   return (
     <div ref={setSortableNodeRef} style={style} className="flex flex-col w-full md:w-72 flex-shrink-0">
       <div className={`flex flex-col h-full ${color}/90 rounded-lg shadow-lg`}>
-        <h2 {...attributes} {...listeners} className="font-bold text-[#212A31] p-3 border-b border-gray-500/50 cursor-grab">
-          {list.title}
-        </h2>
+        {isEditingTitle ? (
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={handleTitleBlur}
+            onKeyDown={handleKeyDown}
+            className="font-bold text-[#212A31] p-3 bg-white border-2 border-[#124E66] rounded-t-lg focus:outline-none"
+            autoFocus
+          />
+        ) : (
+          <div {...attributes} {...listeners} className="flex items-center justify-between p-3 border-b border-gray-500/50 cursor-grab">
+            <h2 className="font-bold text-[#212A31]">{list.title}</h2>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent drag from starting when clicking edit
+                setIsEditingTitle(true);
+              }} 
+              className="text-gray-600 hover:text-black p-1 rounded hover:bg-gray-400/50"
+            >
+              <FiEdit2 size={16} />
+            </button>
+          </div>
+        )}
         <div ref={setNodeRef} className="flex-grow p-3 space-y-3 overflow-y-auto">
           {children}
         </div>
@@ -135,6 +174,18 @@ const BoardView = () => {
             return { ...prev, lists: newLists };
         });
     });
+    socket.on('listUpdated', ({ listId, newTitle }) => {
+        setBoard(prev => {
+            if (!prev) return null;
+            const newLists = prev.lists.map(list => {
+                if (list._id === listId) {
+                    return { ...list, title: newTitle };
+                }
+                return list;
+            });
+            return { ...prev, lists: newLists };
+        });
+    });
     return () => {
       socket.emit('leaveBoard', boardId);
       socket.disconnect();
@@ -153,72 +204,145 @@ const BoardView = () => {
     setBoard(prev => ({ ...prev, lists: updatedLists }));
   };
 
+  const handleUpdateListTitle = (listId, newTitle) => {
+    setBoard(prev => {
+        if (!prev) return null;
+        const newLists = prev.lists.map(list => {
+            if (list._id === listId) {
+                return { ...list, title: newTitle };
+            }
+            return list;
+        });
+        return { ...prev, lists: newLists };
+    });
+    axios.put(`/api/lists/${listId}`, { title: newTitle, boardId }).catch(err => console.error("Failed to update list title", err));
+  };
+
   const handleDragEnd = (event) => {
     const { active, over } = event;
-    if (!over) return;
-    
-    const activeType = active.data.current?.type;
 
-    if (activeType === 'List' && active.id !== over.id) {
-      setBoard(prev => {
-        if (!prev) return null;
-        const oldIndex = prev.lists.findIndex(l => l._id === active.id);
-        const newIndex = prev.lists.findIndex(l => l._id === over.id);
-        if (oldIndex === -1 || newIndex === -1) return prev;
-        const newLists = arrayMove(prev.lists, oldIndex, newIndex);
-        axios.put(`/api/boards/${boardId}/reorder-lists`, { orderedListIds: newLists.map(l => l._id) });
-        return { ...prev, lists: newLists };
-      });
+    // Guard clause: do nothing if an item is dropped in a non-droppable area
+    if (!over) {
+      return;
     }
 
-    if (activeType === 'Card') {
+    // Deconstruct active and over data for easier access
+    const activeId = active.id;
+    const overId = over.id;
+    const activeType = active.data.current?.type;
+    
+    // Prevent action if dropping on the same item
+    if (activeId === overId) {
+        return;
+    }
+
+    // --- 1. Handle LIST Reordering ---
+    const isListDrag = activeType === 'List';
+    if (isListDrag) {
+      setBoard(prev => {
+        if (!prev) return null;
+        
+        const oldIndex = prev.lists.findIndex(l => l._id === activeId);
+        const newIndex = prev.lists.findIndex(l => l._id === overId);
+        
+        if (oldIndex === -1 || newIndex === -1) return prev;
+        
+        const newLists = arrayMove(prev.lists, oldIndex, newIndex);
+
+        // Optimistic UI update
+        axios.put(`/api/boards/${boardId}/reorder-lists`, { orderedListIds: newLists.map(l => l._id) })
+             .catch(err => {
+                console.error("Failed to reorder lists", err);
+                // Optionally revert state on error
+             });
+
+        return { ...prev, lists: newLists };
+      });
+      return; // End execution for list drag
+    }
+
+
+    // --- 2. Handle CARD Reordering & Moving ---
+    const isCardDrag = activeType === 'Card';
+    if (isCardDrag) {
+      setBoard(prev => {
+        if (!prev) return prev;
+
+        // Find the source list and the active card
         const sourceListId = active.data.current.card.list;
-        const destListId = over.data.current?.list?._id || over.id;
+        const sourceList = prev.lists.find(l => l._id === sourceListId);
+        const sourceCardIndex = sourceList?.cards.findIndex(c => c._id === activeId);
 
-        setBoard(prev => {
-            if (!prev) return prev;
+        if (sourceList === undefined || sourceCardIndex === -1) {
+            console.error("Source list or card not found!");
+            return prev;
+        }
+
+        // Find the destination list
+        const overData = over.data.current;
+        const destListId = overData.type === 'Card' ? overData.card.list : over.id;
+        const destList = prev.lists.find(l => l._id === destListId);
+
+        if (destList === undefined) {
+            console.error("Destination list not found!");
+            return prev;
+        }
+
+        // Create a deep copy to avoid direct state mutation issues
+        const newLists = JSON.parse(JSON.stringify(prev.lists));
+        const sourceListInNew = newLists.find(l => l._id === sourceListId);
+        const destListInNew = newLists.find(l => l._id === destListId);
+
+        // A. SAME LIST REORDERING
+        if (sourceListId === destListId) {
+            const listToReorder = sourceListInNew;
             
-            let newLists = [...prev.lists];
-            const sourceListIndex = newLists.findIndex(l => l._id === sourceListId);
-            const destListIndex = newLists.findIndex(l => l._id === destListId);
-            if (sourceListIndex === -1 || destListIndex === -1) return prev;
-
-            const sourceList = newLists[sourceListIndex];
-            const destList = newLists[destListIndex];
-
-            const sourceCardIndex = sourceList.cards.findIndex(c => c._id === active.id);
-            if (sourceCardIndex === -1) return prev;
-
-            const [movedCard] = sourceList.cards.splice(sourceCardIndex, 1);
-            
-            if (sourceListId === destListId) {
-                const destCardIndex = destList.cards.findIndex(c => c._id === over.id);
-                if (destCardIndex === -1) return prev;
-                
-                sourceList.cards.splice(destCardIndex, 0, movedCard);
-
-                axios.put(`/api/lists/${sourceListId}/reorder-cards`, {
-                    orderedCardIds: sourceList.cards.map(c => c._id),
-                    boardId
-                });
-            } else {
-                movedCard.list = destListId;
-
-                const destCardIndex = over.data.current?.type === 'Card'
-                    ? destList.cards.findIndex(c => c._id === over.id)
-                    : destList.cards.length;
-                
-                destList.cards.splice(destCardIndex, 0, movedCard);
-
-                axios.put(`/api/cards/${active.id}/move`, {
-                    boardId, sourceListId, destListId,
-                    sourceIndex: sourceCardIndex,
-                    destIndex: destCardIndex
-                });
+            // Determine the target index for the card
+            const overCardIndex = listToReorder.cards.findIndex(c => c._id === overId);
+            if (overCardIndex === -1) {
+                 console.error("Target card not found in the same list!");
+                 return prev;
             }
+
+            // Use arrayMove for simplicity and correctness
+            const reorderedCards = arrayMove(listToReorder.cards, sourceCardIndex, overCardIndex);
+            listToReorder.cards = reorderedCards;
+
+            // Optimistic UI update & API call
+            axios.put(`/api/lists/${sourceListId}/reorder-cards`, {
+                orderedCardIds: reorderedCards.map(c => c._id),
+                boardId
+            }).catch(err => console.error("Failed to reorder cards", err));
+
+        // B. CROSS-LIST MOVING
+        } else {
+            // Remove card from the source list
+            const [movedCard] = sourceListInNew.cards.splice(sourceCardIndex, 1);
             
-            return { ...prev, lists: newLists };
-        });
+            // Update the card's own list property
+            movedCard.list = destListId;
+
+            // Determine insert position in destination list
+            // Can be dropped on a card or on the list container itself
+            const overCardIndex = destListInNew.cards.findIndex(c => c._id === overId);
+            const newCardIndex = overCardIndex !== -1 ? overCardIndex : destListInNew.cards.length;
+            
+            // Add card to the destination list
+            destListInNew.cards.splice(newCardIndex, 0, movedCard);
+
+             // Optimistic UI update & API call
+            axios.put(`/api/cards/${activeId}/move`, {
+                boardId,
+                sourceListId,
+                destListId,
+                // Your backend might need the new arrays for its own reordering
+                // sourceCardIds: sourceListInNew.cards.map(c => c._id),
+                // destCardIds: destListInNew.cards.map(c => c._id)
+            }).catch(err => console.error("Failed to move card", err));
+        }
+
+        return { ...prev, lists: newLists };
+      });
     }
   };
 
@@ -246,15 +370,12 @@ const BoardView = () => {
                   key={list._id} 
                   list={list} 
                   color={listColors[index % listColors.length]}
+                  onUpdateListTitle={handleUpdateListTitle}
                 >
                   <SortableContext items={(list.cards || []).map(c => c._id)} strategy={verticalListSortingStrategy}>
-                    <div className="flex-grow p-3 space-y-3 overflow-y-auto">
-                      {(list.cards || []).map(card => <SortableCard key={card._id} card={card} />)}
-                    </div>
+                    {(list.cards || []).map(card => <SortableCard key={card._id} card={card} />)}
                   </SortableContext>
-                  <div className="p-3 pt-0">
-                    <AddCardForm listId={list._id} onCardCreated={handleCardCreated} />
-                  </div>
+                  <AddCardForm listId={list._id} onCardCreated={handleCardCreated} />
                 </SortableList>
               ))}
               <AddListForm boardId={boardId} onListCreated={handleListCreated} />
