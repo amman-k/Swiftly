@@ -31,7 +31,7 @@ const createList = async (req, res) => {
     board.lists.push(savedList._id);
     await board.save();
     const listWithEmptyCards = { ...savedList.toObject(), cards: [] };
-    req.io.to(boardId).emit('listCreated', listWithEmptyCards);
+    req.io.to(boardId).emit("listCreated", listWithEmptyCards);
     res.status(201).json(savedList);
   } catch (err) {
     console.error("Error creating list:", error);
@@ -39,4 +39,28 @@ const createList = async (req, res) => {
   }
 };
 
-export { createList };
+/**
+ * @desc    Reorder the cards within a single list
+ * @route   PUT /api/lists/:listId/reorder-cards
+ * @access  Private
+ */
+
+const reorderCards = async (req, res) => {
+  const { listId } = req.params;
+  const { orderedCardIds, boardId } = req.body;
+  try {
+    const list = await List.findById(listId);
+    if (!list) {
+      return res.status(404).json({ message: "List not found" });
+    }
+    list.cards = orderedCardIds;
+    await list.save();
+    req.io.to(boardId).emit("cardsReordered", { listId, orderedCardIds });
+    res.status(200).json({ message: "Cards reordered successfully" });
+  } catch (err) {
+    console.error("Error reordering cards:", error);
+    res.status(500).json({ message: "Server Error: Could not reorder cards." });
+  }
+};
+
+export { createList, reorderCards };
