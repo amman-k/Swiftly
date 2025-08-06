@@ -16,12 +16,13 @@ const createList = async (req, res) => {
   }
 
   try {
-    const board = await Board.findById(boardId);
-    if (!board) {
-      return res.status(404).json({ message: "Board not found." });
-    }
-    if (board.owner.toString() !== req.user.id) {
-      return res.status(401).json({ message: "Not authorized." });
+    // Authorization check remains the same
+    const boardExists = await Board.findOne({
+      _id: boardId,
+      owner: req.user.id,
+    });
+    if (!boardExists) {
+      return res.status(404).json({ message: "Board not found or not authorized." });
     }
 
     const newList = new List({
@@ -30,13 +31,17 @@ const createList = async (req, res) => {
     });
     const savedList = await newList.save();
 
-    board.lists.push(savedList._id);
-    await board.save();
+    // --- MODIFICATION START ---
+    // Update the board atomically using $push
+    await Board.findByIdAndUpdate(boardId, {
+      $push: { lists: savedList._id },
+    });
+    // --- MODIFICATION END ---
 
     const listWithEmptyCards = { ...savedList.toObject(), cards: [] };
     req.io.to(boardId).emit("listCreated", listWithEmptyCards);
 
-    res.status(201).json(savedList);
+    res.status(201).json(listWithEmptyCards);
   } catch (error) {
     console.error("Error creating list:", error);
     res.status(500).json({ message: "Server Error: Could not create list." });
@@ -53,6 +58,7 @@ const reorderCards = async (req, res) => {
   const { orderedCardIds, boardId } = req.body;
 
   try {
+    // Authorization checks remain the same
     const board = await Board.findById(boardId);
     if (!board) {
       return res.status(404).json({ message: "Board not found." });
@@ -61,13 +67,17 @@ const reorderCards = async (req, res) => {
       return res.status(401).json({ message: "Not authorized." });
     }
 
-    const list = await List.findOne({ _id: listId, board: boardId });
-    if (!list) {
-      return res.status(404).json({ message: "List not found on this board." });
-    }
+    const updatedList = await List.findOneAndUpdate(
+      { _id: listId, board: boardId }, // Find the list on the correct board
+      { $set: { cards: orderedCardIds } }, // Atomically set the new card order
+      { new: true } // Option to return the updated document
+    );
 
-    list.cards = orderedCardIds;
-    await list.save();
+    if (!updatedList) {
+      return res
+        .status(404)
+        .json({ message: "List not found on this board." });
+    }
 
     req.io.to(boardId).emit("cardsReordered", { listId, orderedCardIds });
 
