@@ -1,10 +1,11 @@
 import express from 'express';
-import { createList } from '../controllers/listController.js';
+import { createList, reorderCards } from '../controllers/listController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 
 const router=express.Router();
 
 router.route('/').post(protect,createList);
+router.route('/:listId/reorder-cards').post(protect,reorderCards);
 
 export default router;
 
