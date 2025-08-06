@@ -3,11 +3,9 @@ import axios from 'axios';
 
 const AuthContext = createContext();
 
-
 export const useAuth = () => {
   return useContext(AuthContext);
 };
-
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -16,22 +14,19 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkLoggedIn = async () => {
       try {
-      
         const { data } = await axios.get('/auth/current_user');
-        
         if (data) {
           setUser(data);
         }
       } catch (error) {
-        console.error('Not authenticated', error.message);
+        console.error('Not authenticated:', error.message);
         setUser(null);
       } finally {
         setLoading(false);
       }
     };
-
     checkLoggedIn();
-  }, []); 
+  }, []);
 
   const value = {
     user,
@@ -41,7 +36,6 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-
       {!loading && children}
     </AuthContext.Provider>
   );
