@@ -9,7 +9,7 @@ import { CSS } from '@dnd-kit/utilities';
 import io from 'socket.io-client';
 
 // --- Sortable & Draggable Card Component ---
-const SortableCard = ({ card, onDeleteCard }) => {
+const SortableCard = ({ card }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card._id,
     data: { type: 'Card', card },
@@ -22,22 +22,14 @@ const SortableCard = ({ card, onDeleteCard }) => {
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="bg-white text-[#212A31] p-3 rounded-md shadow-sm hover:shadow-md transition-shadow group relative">
-      <div {...listeners} {...attributes} className="cursor-grab w-full">
-        {card.title}
-      </div>
-      <button 
-        onClick={() => onDeleteCard(card._id, card.list)}
-        className="absolute top-1 right-1 p-1 text-gray-400 hover:text-red-600 hover:bg-gray-200 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-      >
-        <FiTrash2 size={14} />
-      </button>
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="bg-white text-[#212A31] p-3 rounded-md shadow-sm hover:shadow-md transition-shadow cursor-grab">
+      {card.title}
     </div>
   );
 };
 
 // --- Sortable & Droppable List Component ---
-const SortableList = ({ list, color, children, onUpdateListTitle }) => {
+const SortableList = ({ list, color, children, onUpdateListTitle, onDeleteList }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(list.title);
 
@@ -96,6 +88,15 @@ const SortableList = ({ list, color, children, onUpdateListTitle }) => {
         <div className="flex-grow p-3 space-y-3 overflow-y-auto">
           {children}
         </div>
+        <div className="p-2 border-t border-gray-500/20">
+            <button 
+                onClick={() => onDeleteList(list._id)}
+                className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-red-600 hover:bg-gray-300 p-1 rounded-md transition-colors"
+            >
+                <FiTrash2 />
+                Delete List
+            </button>
+        </div>
       </div>
     </div>
   );
@@ -105,6 +106,7 @@ const SortableList = ({ list, color, children, onUpdateListTitle }) => {
 const AddCardForm = ({ listId }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
+
   const handleCreateCard = async (e) => {
     e.preventDefault();
     if (!title.trim()) return setIsEditing(false);
@@ -114,12 +116,16 @@ const AddCardForm = ({ listId }) => {
       setIsEditing(false);
     } catch (error) { console.error('Error creating card:', error); }
   };
+
   if (!isEditing) { return (<button onClick={() => setIsEditing(true)} className="w-full text-left text-gray-500 hover:text-gray-700 hover:bg-gray-300 p-2 rounded-md transition-colors">+ Add a card</button>); }
+  
   return (<form onSubmit={handleCreateCard}><textarea value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter a title for this card..." className="w-full p-2 rounded-md text-[#212A31] focus:outline-none focus:ring-2 focus:ring-[#124E66] resize-none" autoFocus /><div className="mt-2 flex items-center gap-2"><button type="submit" className="bg-[#124E66] hover:bg-opacity-80 text-white font-bold py-2 px-4 rounded-md transition-colors">Add Card</button><button type="button" onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-gray-700"><FiX size={24} /></button></div></form>);
 };
+
 const AddListForm = ({ boardId }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
+
   const handleCreateList = async (e) => {
     e.preventDefault();
     if (!title.trim() || !boardId) return setIsEditing(false);
@@ -129,7 +135,9 @@ const AddListForm = ({ boardId }) => {
       setIsEditing(false);
     } catch (error) { console.error('Error creating list:', error); }
   };
+
   if (!isEditing) { return (<motion.button onClick={() => setIsEditing(true)} className="w-full md:w-72 bg-white bg-opacity-10 hover:bg-opacity-20 text-white font-semibold p-3 rounded-lg transition-colors flex-shrink-0">+ Add another list</motion.button>); }
+  
   return (<div className="w-full md:w-72 bg-light-content/90 p-3 rounded-lg flex-shrink-0"><form onSubmit={handleCreateList}><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter list title..." className="w-full p-2 rounded-md text-[#212A31] focus:outline-none focus:ring-2 focus:ring-[#124E66]" autoFocus /><div className="mt-2 flex items-center gap-2"><button type="submit" className="bg-[#124E66] hover:bg-opacity-80 text-white font-bold py-2 px-4 rounded-md transition-colors">Add List</button><button type="button" onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-gray-700"><FiX size={24} /></button></div></form></div>);
 };
 
@@ -175,11 +183,12 @@ const BoardView = () => {
       return { ...prev, lists: prev.lists.map(list => list._id === listId ? { ...list, cards: orderedCardIds.map(id => allCardsMap.get(id)).filter(Boolean) } : list) };
     }));
     socket.on('listUpdated', ({ listId, newTitle }) => handleStateUpdate(prev => ({ ...prev, lists: prev.lists.map(list => (list._id === listId ? { ...list, title: newTitle } : list)) })));
+    socket.on('cardDeleted', ({ cardId, listId }) => handleStateUpdate(prev => ({ ...prev, lists: prev.lists.map(list => list._id === listId ? { ...list, cards: list.cards.filter(c => c._id !== cardId) } : list) })));
     
-    // --- NEW: Listen for 'cardDeleted' event ---
-    socket.on('cardDeleted', ({ cardId, listId }) => handleStateUpdate(prev => ({
+    // --- NEW: Listen for 'listDeleted' event ---
+    socket.on('listDeleted', ({ listId }) => handleStateUpdate(prev => ({
         ...prev,
-        lists: prev.lists.map(list => list._id === listId ? { ...list, cards: list.cards.filter(c => c._id !== cardId) } : list)
+        lists: prev.lists.filter(l => l._id !== listId)
     })));
 
     return () => {
@@ -193,9 +202,16 @@ const BoardView = () => {
   };
 
   const handleDeleteCard = (cardId, listId) => {
-    // We don't need an optimistic update here because the socket event will handle it
     axios.delete(`/api/cards/${cardId}`, { params: { boardId, listId } })
          .catch(err => console.error("Failed to delete card", err));
+  };
+
+  // --- NEW: Handler for deleting a list ---
+  const handleDeleteList = (listId) => {
+    if (window.confirm("Are you sure you want to delete this list and all its cards?")) {
+        axios.delete(`/api/lists/${listId}`, { params: { boardId } })
+             .catch(err => console.error("Failed to delete list", err));
+    }
   };
 
   const handleDragEnd = (event) => {
@@ -274,7 +290,13 @@ const BoardView = () => {
           <SortableContext items={board ? board.lists.map(l => l._id) : []} strategy={horizontalListSortingStrategy}>
             <div className="md:inline-flex md:h-full items-start gap-4 space-y-4 md:space-y-0">
               {board && board.lists.map((list, index) => (
-                <SortableList key={list._id} list={list} color={listColors[index % listColors.length]} onUpdateListTitle={handleUpdateListTitle}>
+                <SortableList 
+                  key={list._id} 
+                  list={list} 
+                  color={listColors[index % listColors.length]} 
+                  onUpdateListTitle={handleUpdateListTitle}
+                  onDeleteList={handleDeleteList}
+                >
                   <SortableContext items={(list.cards || []).map(c => c._id)} strategy={verticalListSortingStrategy}>
                     {(list.cards || []).map(card => <SortableCard key={card._id} card={card} onDeleteCard={handleDeleteCard} />)}
                   </SortableContext>
