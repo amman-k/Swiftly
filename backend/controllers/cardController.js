@@ -25,7 +25,7 @@ const createCard = async (req, res) => {
 
     list.cards.push(savedCard._id);
     await list.save();
-    
+
     const boardId = list.board.toString();
     req.io.to(boardId).emit("cardCreated", { newCard: savedCard, listId });
     res.status(201).json(savedCard);
@@ -46,7 +46,9 @@ const moveCard = async (req, res) => {
   const { sourceListId, destListId, boardId } = req.body;
 
   if (!cardId || !sourceListId || !destListId || !boardId) {
-    return res.status(400).json({ message: "Card ID, list IDs, and board ID are required." });
+    return res
+      .status(400)
+      .json({ message: "Card ID, list IDs, and board ID are required." });
   }
 
   try {
@@ -75,13 +77,13 @@ const moveCard = async (req, res) => {
       if (updatedSourceList) {
         io.to(boardId).emit("cardsReordered", {
           listId: sourceListId,
-          orderedCardIds: updatedSourceList.cards.map(c => c.toString()),
+          orderedCardIds: updatedSourceList.cards.map((c) => c.toString()),
         });
       }
       if (updatedDestList) {
         io.to(boardId).emit("cardsReordered", {
           listId: destListId,
-          orderedCardIds: updatedDestList.cards.map(c => c.toString()),
+          orderedCardIds: updatedDestList.cards.map((c) => c.toString()),
         });
       }
     }
@@ -93,4 +95,35 @@ const moveCard = async (req, res) => {
   }
 };
 
-export { createCard, moveCard };
+/**
+ * @desc    Delete a card
+ * @route   DELETE /api/cards/:cardId
+ * @access  Private
+ */
+
+const deleteCard = async (req, res) => {
+  const { cardId } = req.params;
+  const { boardId } = req.query;
+
+  try {
+    const card = await Card.findById(cardId);
+    if (!card) {
+      return res.status(404).json({ message: "card not found" });
+    }
+    const { list: listId } = card;
+
+    await Card.findByIdAndDelete(cardId);
+    await List.findByIdAndUpdate(listId, {
+      $pull: { cards: cardId },
+    });
+    req.io
+      .to(boardId)
+      .emit("cardDeleted", { cardId, listId: listId.toString() });
+    res.status(200).json({ message: "Card deleted successfully." });
+  } catch (error) {
+    console.error("Error deleting card:", error);
+    res.status(500).json({ message: "Server Error: Could not delete card." });
+  }
+};
+
+export { createCard, moveCard, deleteCard };
