@@ -1,5 +1,6 @@
 import List from "../models/listModel.js";
 import Board from "../models/boardModel.js";
+import Card from "../models/cardModel.js";
 
 /**
  * @desc    Create a new list on a board
@@ -16,13 +17,14 @@ const createList = async (req, res) => {
   }
 
   try {
-    // Authorization check remains the same
     const boardExists = await Board.findOne({
       _id: boardId,
       owner: req.user.id,
     });
     if (!boardExists) {
-      return res.status(404).json({ message: "Board not found or not authorized." });
+      return res
+        .status(404)
+        .json({ message: "Board not found or not authorized." });
     }
 
     const newList = new List({
@@ -31,12 +33,9 @@ const createList = async (req, res) => {
     });
     const savedList = await newList.save();
 
-    // --- MODIFICATION START ---
-    // Update the board atomically using $push
     await Board.findByIdAndUpdate(boardId, {
       $push: { lists: savedList._id },
     });
-    // --- MODIFICATION END ---
 
     const listWithEmptyCards = { ...savedList.toObject(), cards: [] };
     req.io.to(boardId).emit("listCreated", listWithEmptyCards);
@@ -58,7 +57,6 @@ const reorderCards = async (req, res) => {
   const { orderedCardIds, boardId } = req.body;
 
   try {
-    // Authorization checks remain the same
     const board = await Board.findById(boardId);
     if (!board) {
       return res.status(404).json({ message: "Board not found." });
@@ -68,15 +66,13 @@ const reorderCards = async (req, res) => {
     }
 
     const updatedList = await List.findOneAndUpdate(
-      { _id: listId, board: boardId }, // Find the list on the correct board
-      { $set: { cards: orderedCardIds } }, // Atomically set the new card order
-      { new: true } // Option to return the updated document
+      { _id: listId, board: boardId },
+      { $set: { cards: orderedCardIds } },
+      { new: true } //
     );
 
     if (!updatedList) {
-      return res
-        .status(404)
-        .json({ message: "List not found on this board." });
+      return res.status(404).json({ message: "List not found on this board." });
     }
 
     req.io.to(boardId).emit("cardsReordered", { listId, orderedCardIds });
@@ -102,7 +98,7 @@ const updateList = async (req, res) => {
   }
   try {
     const list = await List.findOneAndUpdate(
-      { _id: listId, board: boardId }, // Ensure user owns this list via board check
+      { _id: listId, board: boardId },
       { title },
       { new: true }
     );
@@ -110,10 +106,9 @@ const updateList = async (req, res) => {
       return res.status(404).json({ message: "List not found." });
     }
 
-    // Emit event to other clients
     const io = req.io;
     req.io.to(boardId).emit("listUpdated", { listId, newTitle: list.title });
-    
+
     res.status(200).json(list);
   } catch (error) {
     console.error("Error updating list:", error);
@@ -121,4 +116,45 @@ const updateList = async (req, res) => {
   }
 };
 
-export { createList, reorderCards, updateList };
+/**
+ * @desc    Delete a list and all its cards
+ * @route   DELETE /api/lists/:listId
+ * @access  Private
+ */
+
+const deleteList = async (req, res) => {
+    const { listId } = req.params;
+    const { boardId } = req.query;
+
+    try {
+        // --- CORRECTED: Find the board and verify ownership in a single, safe query ---
+        const board = await Board.findOne({ _id: boardId, owner: req.user.id });
+        if (!board) {
+            return res.status(401).json({ message: "Not authorized or board not found." });
+        }
+
+        const list = await List.findById(listId);
+        if (!list) {
+            return res.status(404).json({ message: "List not found." });
+        }
+
+        if (list.cards && list.cards.length > 0) {
+            await Card.deleteMany({ _id: { $in: list.cards } });
+        }
+
+        await List.findByIdAndDelete(listId);
+
+        await Board.findByIdAndUpdate(boardId, {
+            $pull: { lists: listId }
+        });
+
+        req.io.to(boardId).emit("listDeleted", { listId, boardId });
+
+        res.status(200).json({ message: "List deleted successfully." });
+    } catch (error) {
+        console.error("Error deleting list:", error);
+        res.status(500).json({ message: "Server Error: Could not delete list." });
+    }
+};
+
+export { createList, reorderCards, updateList, deleteList };
