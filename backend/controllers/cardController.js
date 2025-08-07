@@ -60,7 +60,7 @@ const moveCard = async (req, res) => {
     // Step 2: Atomically add the card's ID to the destination list's 'cards' array.
     const updatedDestList = await List.findByIdAndUpdate(
       destListId,
-      { $push: { cards: cardId } },
+      { $addToSet: { cards: cardId } },
       { new: true }
     );
 
