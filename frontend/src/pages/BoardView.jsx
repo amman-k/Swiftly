@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { FiHome, FiX, FiEdit2 } from 'react-icons/fi';
+import { FiHome, FiX, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { DndContext, closestCorners } from '@dnd-kit/core';
 import { SortableContext, useSortable, horizontalListSortingStrategy, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -9,7 +9,7 @@ import { CSS } from '@dnd-kit/utilities';
 import io from 'socket.io-client';
 
 // --- Sortable & Draggable Card Component ---
-const SortableCard = ({ card }) => {
+const SortableCard = ({ card, onDeleteCard }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card._id,
     data: { type: 'Card', card },
@@ -22,8 +22,16 @@ const SortableCard = ({ card }) => {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="bg-white text-[#212A31] p-3 rounded-md shadow-sm hover:shadow-md transition-shadow cursor-grab">
-      {card.title}
+    <div ref={setNodeRef} style={style} className="bg-white text-[#212A31] p-3 rounded-md shadow-sm hover:shadow-md transition-shadow group relative">
+      <div {...listeners} {...attributes} className="cursor-grab w-full">
+        {card.title}
+      </div>
+      <button 
+        onClick={() => onDeleteCard(card._id, card.list)}
+        className="absolute top-1 right-1 p-1 text-gray-400 hover:text-red-600 hover:bg-gray-200 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <FiTrash2 size={14} />
+      </button>
     </div>
   );
 };
@@ -33,7 +41,6 @@ const SortableList = ({ list, color, children, onUpdateListTitle }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(list.title);
 
-  // Syncs the local title state with incoming props from the parent
   useEffect(() => {
     setTitle(list.title);
   }, [list.title]);
@@ -46,7 +53,8 @@ const SortableList = ({ list, color, children, onUpdateListTitle }) => {
     transition,
   } = useSortable({ 
     id: list._id, 
-    data: { type: 'List', list }
+    data: { type: 'List', list },
+    disabled: isEditingTitle,
   });
 
   const style = {
@@ -80,7 +88,7 @@ const SortableList = ({ list, color, children, onUpdateListTitle }) => {
         ) : (
           <div {...attributes} {...listeners} className="flex items-center justify-between p-3 border-b border-gray-500/50 cursor-grab">
             <h2 className="font-bold text-[#212A31]">{list.title}</h2>
-            <button onClick={(e) => { e.stopPropagation(); setIsEditingTitle(true); }} className="text-gray-600 hover:text-black p-1 rounded hover:bg-gray-400/50">
+            <button onClick={() => setIsEditingTitle(true)} className="text-gray-600 hover:text-black p-1 rounded hover:bg-gray-400/50">
               <FiEdit2 size={16} />
             </button>
           </div>
@@ -97,7 +105,6 @@ const SortableList = ({ list, color, children, onUpdateListTitle }) => {
 const AddCardForm = ({ listId }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
-
   const handleCreateCard = async (e) => {
     e.preventDefault();
     if (!title.trim()) return setIsEditing(false);
@@ -107,16 +114,12 @@ const AddCardForm = ({ listId }) => {
       setIsEditing(false);
     } catch (error) { console.error('Error creating card:', error); }
   };
-
   if (!isEditing) { return (<button onClick={() => setIsEditing(true)} className="w-full text-left text-gray-500 hover:text-gray-700 hover:bg-gray-300 p-2 rounded-md transition-colors">+ Add a card</button>); }
-  
   return (<form onSubmit={handleCreateCard}><textarea value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter a title for this card..." className="w-full p-2 rounded-md text-[#212A31] focus:outline-none focus:ring-2 focus:ring-[#124E66] resize-none" autoFocus /><div className="mt-2 flex items-center gap-2"><button type="submit" className="bg-[#124E66] hover:bg-opacity-80 text-white font-bold py-2 px-4 rounded-md transition-colors">Add Card</button><button type="button" onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-gray-700"><FiX size={24} /></button></div></form>);
 };
-
 const AddListForm = ({ boardId }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
-
   const handleCreateList = async (e) => {
     e.preventDefault();
     if (!title.trim() || !boardId) return setIsEditing(false);
@@ -126,9 +129,7 @@ const AddListForm = ({ boardId }) => {
       setIsEditing(false);
     } catch (error) { console.error('Error creating list:', error); }
   };
-
   if (!isEditing) { return (<motion.button onClick={() => setIsEditing(true)} className="w-full md:w-72 bg-white bg-opacity-10 hover:bg-opacity-20 text-white font-semibold p-3 rounded-lg transition-colors flex-shrink-0">+ Add another list</motion.button>); }
-  
   return (<div className="w-full md:w-72 bg-light-content/90 p-3 rounded-lg flex-shrink-0"><form onSubmit={handleCreateList}><input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter list title..." className="w-full p-2 rounded-md text-[#212A31] focus:outline-none focus:ring-2 focus:ring-[#124E66]" autoFocus /><div className="mt-2 flex items-center gap-2"><button type="submit" className="bg-[#124E66] hover:bg-opacity-80 text-white font-bold py-2 px-4 rounded-md transition-colors">Add List</button><button type="button" onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-gray-700"><FiX size={24} /></button></div></form></div>);
 };
 
@@ -163,26 +164,22 @@ const BoardView = () => {
     const handleStateUpdate = (updateFn) => setBoard((prev) => (prev ? updateFn(prev) : null));
 
     socket.on('listCreated', (newList) => handleStateUpdate(prev => ({ ...prev, lists: [...prev.lists, newList] })));
-    
-    socket.on('cardCreated', ({ newCard, listId }) => handleStateUpdate(prev => ({
-      ...prev,
-      lists: prev.lists.map(list => list._id === listId ? { ...list, cards: [...(list.cards || []), newCard] } : list)
-    })));
-
+    socket.on('cardCreated', ({ newCard, listId }) => handleStateUpdate(prev => ({ ...prev, lists: prev.lists.map(list => list._id === listId ? { ...list, cards: [...(list.cards || []), newCard] } : list) })));
     socket.on('listsReordered', ({ orderedListIds }) => handleStateUpdate(prev => {
       const listMap = new Map(prev.lists.map(list => [list._id, list]));
       return { ...prev, lists: orderedListIds.map(id => listMap.get(id)).filter(Boolean) };
     }));
-    
     socket.on('cardsReordered', ({ listId, orderedCardIds }) => handleStateUpdate(prev => {
       const allCards = prev.lists.flatMap(l => l.cards || []).filter(Boolean);
       const allCardsMap = new Map(allCards.map(c => [c._id, c]));
       return { ...prev, lists: prev.lists.map(list => list._id === listId ? { ...list, cards: orderedCardIds.map(id => allCardsMap.get(id)).filter(Boolean) } : list) };
     }));
+    socket.on('listUpdated', ({ listId, newTitle }) => handleStateUpdate(prev => ({ ...prev, lists: prev.lists.map(list => (list._id === listId ? { ...list, title: newTitle } : list)) })));
     
-    socket.on('listUpdated', ({ listId, newTitle }) => handleStateUpdate(prev => ({
-      ...prev,
-      lists: prev.lists.map(list => (list._id === listId ? { ...list, title: newTitle } : list))
+    // --- NEW: Listen for 'cardDeleted' event ---
+    socket.on('cardDeleted', ({ cardId, listId }) => handleStateUpdate(prev => ({
+        ...prev,
+        lists: prev.lists.map(list => list._id === listId ? { ...list, cards: list.cards.filter(c => c._id !== cardId) } : list)
     })));
 
     return () => {
@@ -192,53 +189,53 @@ const BoardView = () => {
   }, [boardId]);
 
   const handleUpdateListTitle = (listId, newTitle) => {
-    setBoard(prev => {
-      if (!prev) return null;
-      return { ...prev, lists: prev.lists.map(list => (list._id === listId ? { ...list, title: newTitle } : list)) };
-    });
     axios.put(`/api/lists/${listId}`, { title: newTitle, boardId }).catch(err => console.error("Failed to update list title", err));
+  };
+
+  const handleDeleteCard = (cardId, listId) => {
+    // We don't need an optimistic update here because the socket event will handle it
+    axios.delete(`/api/cards/${cardId}`, { params: { boardId, listId } })
+         .catch(err => console.error("Failed to delete card", err));
   };
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-
     const activeType = active.data.current?.type;
     
     if (activeType === 'List') {
-        setBoard((board) => {
-            if (!board) return board;
-            const oldIndex = board.lists.findIndex(l => l._id === active.id);
-            const newIndex = board.lists.findIndex(l => l._id === over.id);
-            if (oldIndex === -1 || newIndex === -1) return board;
-
-            const reorderedLists = arrayMove(board.lists, oldIndex, newIndex);
+        setBoard(prev => {
+            const oldIndex = prev.lists.findIndex(l => l._id === active.id);
+            const newIndex = prev.lists.findIndex(l => l._id === over.id);
+            const reorderedLists = arrayMove(prev.lists, oldIndex, newIndex);
             axios.put(`/api/boards/${boardId}/reorder-lists`, { orderedListIds: reorderedLists.map(l => l._id) });
-            return { ...board, lists: reorderedLists };
+            return { ...prev, lists: reorderedLists };
         });
     }
 
     if (activeType === 'Card') {
-        setBoard((board) => {
-            if (!board) return board;
-            const sourceListId = active.data.current.card.list;
-            const destListId = over.data.current?.type === 'Card' ? over.data.current.card.list : over.data.current.list._id;
+        const sourceListId = active.data.current.card.list;
+        const destListId = over.data.current?.type === 'Card' ? over.data.current.card.list : over.id;
+
+        setBoard(prev => {
+            const sourceList = prev.lists.find(l => l._id === sourceListId);
+            const destList = prev.lists.find(l => l._id === destListId);
+            if (!sourceList || !destList) return prev;
             
             if (sourceListId === destListId) {
-                const list = board.lists.find(l => l._id === sourceListId);
-                if (!list) return board;
-                const oldCardIndex = list.cards.findIndex(c => c._id === active.id);
-                const newCardIndex = list.cards.findIndex(c => c._id === over.id);
-                if (oldCardIndex === -1 || newCardIndex === -1) return board;
-
-                const reorderedCards = arrayMove(list.cards, oldCardIndex, newCardIndex);
+                const oldCardIndex = sourceList.cards.findIndex(c => c._id === active.id);
+                const newCardIndex = destList.cards.findIndex(c => c._id === over.id);
+                if (oldCardIndex === -1 || newCardIndex === -1) return prev;
+                
+                const reorderedCards = arrayMove(sourceList.cards, oldCardIndex, newCardIndex);
                 axios.put(`/api/lists/${sourceListId}/reorder-cards`, { boardId, orderedCardIds: reorderedCards.map(c => c._id) });
-                return {...board, lists: board.lists.map(l => l._id === sourceListId ? {...l, cards: reorderedCards} : l)};
+                
+                return {...prev, lists: prev.lists.map(l => l._id === sourceListId ? {...l, cards: reorderedCards} : l)};
             } else {
                 const movedCard = active.data.current.card;
                 axios.put(`/api/cards/${active.id}/move`, { boardId, sourceListId, destListId });
 
-                const newLists = board.lists.map(list => {
+                const newLists = prev.lists.map(list => {
                     if (list._id === sourceListId) {
                         return { ...list, cards: (list.cards || []).filter(c => c._id !== active.id) };
                     }
@@ -252,7 +249,7 @@ const BoardView = () => {
                     }
                     return list;
                 });
-                return { ...board, lists: newLists };
+                return { ...prev, lists: newLists };
             }
         });
     }
@@ -279,7 +276,7 @@ const BoardView = () => {
               {board && board.lists.map((list, index) => (
                 <SortableList key={list._id} list={list} color={listColors[index % listColors.length]} onUpdateListTitle={handleUpdateListTitle}>
                   <SortableContext items={(list.cards || []).map(c => c._id)} strategy={verticalListSortingStrategy}>
-                    {(list.cards || []).map(card => <SortableCard key={card._id} card={card} />)}
+                    {(list.cards || []).map(card => <SortableCard key={card._id} card={card} onDeleteCard={handleDeleteCard} />)}
                   </SortableContext>
                   <AddCardForm listId={list._id} />
                 </SortableList>
