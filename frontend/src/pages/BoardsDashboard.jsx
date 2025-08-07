@@ -5,6 +5,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
+// --- Reusable Components ---
 
 const DashboardNavbar = ({ user }) => {
   return (
@@ -12,10 +13,10 @@ const DashboardNavbar = ({ user }) => {
       <nav className="container mx-auto flex justify-between items-center">
         <div className="text-2xl font-bold text-white">Swiftly</div>
         <div className="flex items-center gap-4">
-          <span className="text-white font-semibold">{user.name}</span>
-          <img src={user.avatar} alt="User Avatar" className="w-10 h-10 rounded-full" />
+          <span className="text-white font-semibold">{user?.name || 'User'}</span>
+          <img src={user?.avatar} alt="User Avatar" className="w-10 h-10 rounded-full" />
           <a 
-            href="/auth/logout" 
+            href="/auth/logout"
             className="flex items-center gap-2 text-gray-300 hover:text-white border border-gray-600 hover:bg-red-600 hover:border-red-600 font-semibold py-2 px-4 rounded transition-all duration-200"
           >
             <FiLogOut />
@@ -82,28 +83,39 @@ const CreateBoardModal = ({ isOpen, onClose, onCreate }) => {
 };
 
 
+// --- Main Dashboard Component ---
 
 const BoardsDashboard = () => {
   const { user } = useAuth();
-  const [boards, setBoards] = useState([]);
+  const [boards, setBoards] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // --- DIAGNOSTIC LOG ---
+  console.log("User object from context:", user);
 
   useEffect(() => {
     const fetchBoards = async () => {
       try {
         const { data } = await axios.get('/api/boards');
-        setBoards(data);
+        // --- DIAGNOSTIC LOG ---
+        console.log("Fetched boards data:", data);
+        setBoards(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Error fetching boards:', err);
         setError('Could not load your boards. Please try again later.');
+        setBoards([]);
       } finally {
         setLoading(false);
       }
     };
-    fetchBoards();
-  }, []);
+    if (user) { // Only fetch boards if the user exists
+        fetchBoards();
+    } else {
+        setLoading(false); // If no user, stop loading
+    }
+  }, [user]);
 
   const handleCreateBoard = async (title) => {
     try {
