@@ -126,4 +126,4 @@ const deleteBoard = async (req, res) => {
   }
 };
 
-export { getBoards, createBoard, getBoardById, reorderLists };
+export { getBoards, createBoard, getBoardById, reorderLists, deleteBoard };
