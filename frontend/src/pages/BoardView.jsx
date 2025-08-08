@@ -14,6 +14,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import io from 'socket.io-client';
 import CardDetailsModal from '../components/CardDetailsModal'; 
+import toast from 'react-hot-toast';
 
 const AnimatedBlobs = () => (
   <div className="absolute inset-0 w-full h-full overflow-hidden -z-10">
@@ -133,13 +134,18 @@ const AddCardForm = ({ listId, onCardCreated }) => {
 
   const handleCreateCard = async (e) => {
     e.preventDefault();
-    if (!title.trim()) return setIsEditing(false);
+    if (!title.trim()) {
+      toast.error("Title cannot be empty.")
+      return setIsEditing(false);
+    }
     try {
       const { data: newCard } = await axios.post('/api/cards', { title, listId });
       onCardCreated(newCard, listId);
       setTitle('');
+      toast.success("Card Created.")
       setIsEditing(false);
     } catch (error) {
+      toast.error('Failed to create card.');
       console.error('Error creating card:', error);
     }
   };
@@ -179,13 +185,18 @@ const AddListForm = ({ boardId, onListCreated }) => {
 
   const handleCreateList = async (e) => {
     e.preventDefault();
-    if (!title.trim()) return setIsEditing(false);
+    if (!title.trim()) {
+      toast.error("Title cannot be empty.");
+      return setIsEditing(false);
+    }
     try {
       const { data: newList } = await axios.post('/api/lists', { title, boardId });
       onListCreated(newList); 
       setTitle('');
+      toast.success("List created.")
       setIsEditing(false);
     } catch (error) {
+      toast.error("Error creating list");
       console.error('Error creating list:', error);
     }
   };
@@ -312,7 +323,15 @@ const BoardView = () => {
     });
   };
   const handleUpdateListTitle = (listId, newTitle) => {
-    axios.put(`/api/lists/${listId}`, { title: newTitle, boardId }).catch(console.error);
+    setBoard(prev => ({
+        ...prev,
+        lists: prev.lists.map(list => 
+            list._id === listId 
+            ? { ...list, title: newTitle } 
+            : list
+        )
+    }));
+    axios.put(`/api/lists/${listId}`, { title: newTitle, boardId }).then(()=> toast.success('List title updated.')).catch(()=>toast.error('Error updating title.'));
   };
 
   const handleDeleteCard = (cardId, listId) => {
@@ -324,7 +343,7 @@ const BoardView = () => {
             : list
         )
     }));
-    axios.delete(`/api/cards/${cardId}`, { params: { boardId, listId } }).catch(console.error);
+    axios.delete(`/api/cards/${cardId}`, { params: { boardId, listId } }).then(()=>toast.success("Card deleted successfully")).catch(()=>toast.error("Error deleting card."));
   };
 
   const handleDeleteList = (listId) => {
@@ -333,12 +352,12 @@ const BoardView = () => {
           ...prev,
           lists: prev.lists.filter(l => l._id !== listId)
       }));
-      axios.delete(`/api/lists/${listId}`, { params: { boardId } }).catch(console.error);
+      axios.delete(`/api/lists/${listId}`, { params: { boardId } }).then(()=>toast.success("List deleted successfully.")).catch(()=>toast.error("Error deleting List"));
     }
   };
 
   const handleUpdateCard = (cardId, updatedDetails) => {
-    axios.put(`/api/cards/${cardId}`, updatedDetails).catch(console.error);
+    axios.put(`/api/cards/${cardId}`, updatedDetails).then(()=>toast.success("Card updated Successfully")).catch(()=>toast.error("Error updating Card"));
   };
 
   const handleDragEnd = (event) => {
