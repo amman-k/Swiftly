@@ -17,7 +17,7 @@ const DashboardNavbar = ({ user }) => {
           <img src={user.avatar} alt="User Avatar" className="w-10 h-10 rounded-full" />
           <a 
             href="/auth/logout"
-            className="flex items-center gap-2 text-gray-300 hover:text-white border border-gray-600 hover:bg-red-600 hover:border-red-600 font-semibold py-2 px-4 rounded transition-all duration-200"
+            className="flex items-center gap-2 text-gray-300 hover:text-white border border-gray-600 hover:bg-red-600 hover:border-red-600 font-semibold py-2 px-4 rounded-4xl transition-all duration-200"
           >
             <FiLogOut />
             <span>Logout</span>
@@ -52,7 +52,7 @@ const CreateBoardModal = ({ isOpen, onClose, onCreate }) => {
             initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -50, opacity: 0 }}
-            className="bg-[#2E3944] rounded-lg p-8 shadow-xl w-full max-w-md relative"
+            className="bg-[#2E3944] rounded-4xl p-8 shadow-xl w-full max-w-md relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">
@@ -65,12 +65,12 @@ const CreateBoardModal = ({ isOpen, onClose, onCreate }) => {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter board title..."
-                className="w-full p-3 rounded-lg bg-gray-200 text-[#212A31] focus:outline-none focus:ring-2 focus:ring-[#124E66]"
+                className="w-full p-3 rounded-2xl bg-gray-200 text-[#212A31] focus:outline-none focus:ring-2 focus:ring-[#124E66]"
                 autoFocus
               />
               <button
                 type="submit"
-                className="w-full mt-6 bg-[#124E66] hover:bg-opacity-80 text-white font-bold py-3 px-4 rounded-lg transition-colors"
+                className="w-full mt-6 bg-[#124E66] hover:bg-opacity-80 text-gray-400 hover:text-white font-bold py-3 px-4 rounded-4xl transition-colors"
               >
                 Create Board
               </button>
@@ -83,14 +83,65 @@ const CreateBoardModal = ({ isOpen, onClose, onCreate }) => {
 };
 
 
-// --- Main Dashboard Component ---
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, boardTitle }) => {
+    if (!isOpen) return null;
 
+    return (
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4"
+            >
+                <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="bg-darker-bg rounded-lg p-8 shadow-2xl w-full max-w-md text-center"
+                >
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-900/50">
+                        <svg className="h-6 w-6 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                        </svg>
+                    </div>
+                    <h3 className="text-2xl font-semibold mt-4 text-white">Delete "{boardTitle}"?</h3>
+                    <p className="text-gray-400 mt-2">Are you sure? All lists and cards will be permanently removed. This action cannot be undone.</p>
+                    <div className="mt-6 flex justify-center gap-4">
+                        <button onClick={onClose} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-4xl transition-colors">Cancel</button>
+                        <button onClick={onConfirm} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-4xl transition-colors">Delete</button>
+                    </div>
+                </motion.div>
+            </motion.div>
+        </AnimatePresence>
+    );
+};
+
+// --- NEW: Empty State Component ---
+const EmptyState = ({ onOpenCreateModal }) => {
+    return (
+        <div className="text-center py-16 border-2 border-dashed border-gray-600 rounded-lg">
+            <h2 className="text-2xl font-semibold text-gray-300">Welcome to Swiftly!</h2>
+            <p className="text-gray-400 mt-2">You don't have any boards yet. Get started by creating one.</p>
+            <button 
+                onClick={onOpenCreateModal}
+                className="mt-6 bg-black hover:bg-opacity-80 text-gray-400 hover:text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors"
+            >
+                Create Your First Board
+            </button>
+        </div>
+    );
+};
+
+
+// --- Main Dashboard Component ---
 const BoardsDashboard = () => {
   const { user } = useAuth();
   const [boards, setBoards] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [boardToDelete, setBoardToDelete] = useState(null);
 
   useEffect(() => {
     const fetchBoards = async () => {
@@ -116,29 +167,22 @@ const BoardsDashboard = () => {
     try {
       const { data: newBoard } = await axios.post('/api/boards', { title });
       setBoards(prevBoards => [...prevBoards, newBoard]);
-      setIsModalOpen(false);
+      setIsCreateModalOpen(false);
     } catch (err) {
       console.error('Error creating board:', err);
     }
   };
 
-  // --- NEW: Handler for deleting a board ---
-  const handleDeleteBoard = async (boardId, event) => {
-    event.preventDefault(); // Prevent the Link from navigating
-    event.stopPropagation(); // Stop the event from bubbling up
-
-    if (window.confirm("Are you sure you want to delete this board and all its content? This action cannot be undone.")) {
-        try {
-            await axios.delete(`/api/boards/${boardId}`);
-            // Optimistic UI update: remove the board from the state
-            setBoards(prevBoards => prevBoards.filter(board => board._id !== boardId));
-        } catch (err) {
-            console.error("Failed to delete board:", err);
-            // Optionally, show an error message to the user
-        }
+  const confirmDeleteBoard = async () => {
+    if (!boardToDelete) return;
+    try {
+        await axios.delete(`/api/boards/${boardToDelete._id}`);
+        setBoards(prevBoards => prevBoards.filter(board => board._id !== boardToDelete._id));
+        setBoardToDelete(null);
+    } catch (err) {
+        console.error("Failed to delete board:", err);
     }
   };
-
 
   if (!user) {
     return null; 
@@ -147,9 +191,15 @@ const BoardsDashboard = () => {
   return (
     <>
       <CreateBoardModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
         onCreate={handleCreateBoard} 
+      />
+      <ConfirmationModal
+        isOpen={!!boardToDelete}
+        onClose={() => setBoardToDelete(null)}
+        onConfirm={confirmDeleteBoard}
+        boardTitle={boardToDelete?.title}
       />
       <div className="flex flex-col h-screen">
         <DashboardNavbar user={user} />
@@ -160,30 +210,40 @@ const BoardsDashboard = () => {
           {error && <p className="text-red-400">{error}</p>}
 
           {!loading && !error && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {boards.map((board) => (
-                <Link to={`/board/${board._id}`} key={board._id} className="relative group">
-                  <div className="bg-[#D3D9D4] text-[#212A31] p-4 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer h-full">
-                    <h2 className="font-bold text-xl">{board.title}</h2>
-                  </div>
+            <>
+              {boards.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {boards.map((board) => (
+                    <Link to={`/board/${board._id}`} key={board._id} className="relative group">
+                      <div className="bg-[#D3D9D4] text-[#212A31] p-4 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer h-full">
+                        <h2 className="font-bold text-xl">{board.title}</h2>
+                      </div>
+                      <button 
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setBoardToDelete(board);
+                        }}
+                        className="absolute top-2 right-2 p-1.5 text-gray-500 hover:text-red-600 bg-white/50 hover:bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <FiTrash2 size={16} />
+                      </button>
+                    </Link>
+                  ))}
                   <button 
-                    onClick={(e) => handleDeleteBoard(board._id, e)}
-                    className="absolute top-2 right-2 p-1.5 text-gray-500 hover:text-red-600 bg-white/50 hover:bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="bg-[#124E66] hover:bg-opacity-80 text-gray-400 hover:text-white font-bold p-4 rounded-2xl shadow-md transition-colors border-2 border-dashed border-gray-400 hover:border-white flex flex-col items-center justify-center gap-2"
                   >
-                    <FiTrash2 size={16} />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Create a new board
                   </button>
-                </Link>
-              ))}
-              <button 
-                onClick={() => setIsModalOpen(true)}
-                className="bg-[#124E66] hover:bg-opacity-80 text-white font-bold p-4 rounded-lg shadow-md transition-colors border-2 border-dashed border-gray-400 hover:border-white flex flex-col items-center justify-center gap-2"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Create a new board
-              </button>
-            </div>
+                </div>
+              ) : (
+                <EmptyState onOpenCreateModal={() => setIsCreateModalOpen(true)} />
+              )}
+            </>
           )}
         </main>
       </div>
