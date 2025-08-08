@@ -13,7 +13,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import io from 'socket.io-client';
-import CardDetailsModal from '../components/CardDetailsModal'; // <-- Import the new modal
+import CardDetailsModal from '../components/CardDetailsModal'; 
 
 const AnimatedBlobs = () => (
   <div className="absolute inset-0 w-full h-full overflow-hidden -z-10">
