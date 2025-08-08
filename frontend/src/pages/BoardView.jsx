@@ -126,8 +126,8 @@ const SortableList = ({ list, color, children, onUpdateListTitle, onDeleteList }
   );
 };
 
-/* ------------------------------- Add Forms ------------------------------ */
-const AddCardForm = ({ listId }) => {
+/* ------------------------------- Add Forms (Corrected) ------------------------------ */
+const AddCardForm = ({ listId, onCardCreated }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
 
@@ -135,7 +135,8 @@ const AddCardForm = ({ listId }) => {
     e.preventDefault();
     if (!title.trim()) return setIsEditing(false);
     try {
-      await axios.post('/api/cards', { title, listId });
+      const { data: newCard } = await axios.post('/api/cards', { title, listId });
+      onCardCreated(newCard, listId); // <-- Call the callback to update parent state
       setTitle('');
       setIsEditing(false);
     } catch (error) {
@@ -172,7 +173,7 @@ const AddCardForm = ({ listId }) => {
   );
 };
 
-const AddListForm = ({ boardId }) => {
+const AddListForm = ({ boardId, onListCreated }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
 
@@ -180,7 +181,8 @@ const AddListForm = ({ boardId }) => {
     e.preventDefault();
     if (!title.trim()) return setIsEditing(false);
     try {
-      await axios.post('/api/lists', { title, boardId });
+      const { data: newList } = await axios.post('/api/lists', { title, boardId });
+      onListCreated(newList); // <-- Call the callback to update parent state
       setTitle('');
       setIsEditing(false);
     } catch (error) {
@@ -296,6 +298,19 @@ const BoardView = () => {
     };
   }, [boardId]);
 
+  const handleListCreated = (newList) => setBoard(prev => ({ ...prev, lists: [...prev.lists, newList] }));
+  const handleCardCreated = (newCard, listId) => {
+    setBoard(prev => {
+      if (!prev) return null;
+      const newLists = prev.lists.map(list => {
+        if (list._id === listId) {
+          return { ...list, cards: [...(list.cards || []), newCard] };
+        }
+        return list;
+      });
+      return { ...prev, lists: newLists };
+    });
+  };
   const handleUpdateListTitle = (listId, newTitle) => {
     axios.put(`/api/lists/${listId}`, { title: newTitle, boardId }).catch(console.error);
   };
@@ -414,10 +429,10 @@ const BoardView = () => {
                         <SortableCard key={card._id} card={card} onDeleteCard={handleDeleteCard} onCardClick={setSelectedCard} />
                       ))}
                     </SortableContext>
-                    <AddCardForm listId={list._id} />
+                    <AddCardForm listId={list._id} onCardCreated={handleCardCreated} />
                   </SortableList>
                 ))}
-                <AddListForm boardId={boardId} />
+                <AddListForm boardId={boardId} onListCreated={handleListCreated} />
               </div>
             </SortableContext>
           </main>
