@@ -13,6 +13,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import io from 'socket.io-client';
+import CardDetailsModal from '../components/CardDetailsModal'; // <-- Import the new modal
 
 const AnimatedBlobs = () => (
   <div className="absolute inset-0 w-full h-full overflow-hidden -z-10">
@@ -22,7 +23,7 @@ const AnimatedBlobs = () => (
 );
 
 /* ---------------------------------- Card ---------------------------------- */
-const SortableCard = ({ card, onDeleteCard }) => {
+const SortableCard = ({ card, onDeleteCard, onCardClick }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card._id,
     data: { type: 'Card', card },
@@ -41,14 +42,23 @@ const SortableCard = ({ card, onDeleteCard }) => {
       className="bg-white text-gray-800 p-3 rounded-xl shadow hover:shadow-lg transition-all group relative"
       variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
     >
-      <div {...listeners} {...attributes} className="cursor-grab select-none">{card.title}</div>
-      <button
-        onClick={() => onDeleteCard(card._id, card.list)}
-        className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 transition-opacity opacity-0 group-hover:opacity-100"
-        aria-label="Delete card"
-      >
-        <FiTrash2 size={16} />
-      </button>
+      <div {...listeners} {...attributes} className="cursor-grab select-none w-full">{card.title}</div>
+      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => onCardClick(card)}
+          className="p-1 text-gray-400 hover:text-blue-500"
+          aria-label="Edit card"
+        >
+          <FiEdit2 size={16} />
+        </button>
+        <button
+          onClick={() => onDeleteCard(card._id, card.list)}
+          className="p-1 text-gray-400 hover:text-red-500"
+          aria-label="Delete card"
+        >
+          <FiTrash2 size={16} />
+        </button>
+      </div>
     </motion.div>
   );
 };
@@ -116,8 +126,8 @@ const SortableList = ({ list, color, children, onUpdateListTitle, onDeleteList }
   );
 };
 
-/* ------------------------------- Add Forms (Corrected) ------------------------------ */
-const AddCardForm = ({ listId, onCardCreated }) => {
+/* ------------------------------- Add Forms ------------------------------ */
+const AddCardForm = ({ listId }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
 
@@ -125,8 +135,7 @@ const AddCardForm = ({ listId, onCardCreated }) => {
     e.preventDefault();
     if (!title.trim()) return setIsEditing(false);
     try {
-      const { data: newCard } = await axios.post('/api/cards', { title, listId });
-      onCardCreated(newCard, listId); // <-- Call the callback to update parent state
+      await axios.post('/api/cards', { title, listId });
       setTitle('');
       setIsEditing(false);
     } catch (error) {
@@ -163,7 +172,7 @@ const AddCardForm = ({ listId, onCardCreated }) => {
   );
 };
 
-const AddListForm = ({ boardId, onListCreated }) => {
+const AddListForm = ({ boardId }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
 
@@ -171,8 +180,7 @@ const AddListForm = ({ boardId, onListCreated }) => {
     e.preventDefault();
     if (!title.trim()) return setIsEditing(false);
     try {
-      const { data: newList } = await axios.post('/api/lists', { title, boardId });
-      onListCreated(newList); // <-- Call the callback to update parent state
+      await axios.post('/api/lists', { title, boardId });
       setTitle('');
       setIsEditing(false);
     } catch (error) {
@@ -217,6 +225,7 @@ const BoardView = () => {
   const [board, setBoard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedCard, setSelectedCard] = useState(null);
 
   const listColors = ['bg-white'];
 
@@ -276,6 +285,10 @@ const BoardView = () => {
       ...prev,
       lists: prev.lists.filter(l => l._id !== listId),
     })));
+    socket.on('cardUpdated', ({ updatedCard }) => updateBoard(prev => ({
+        ...prev,
+        lists: prev.lists.map(list => list._id === updatedCard.list ? { ...list, cards: list.cards.map(c => c._id === updatedCard._id ? updatedCard : c) } : list)
+    })));
 
     return () => {
       socket.emit('leaveBoard', boardId);
@@ -283,19 +296,6 @@ const BoardView = () => {
     };
   }, [boardId]);
 
-  const handleListCreated = (newList) => setBoard(prev => ({ ...prev, lists: [...prev.lists, newList] }));
-  const handleCardCreated = (newCard, listId) => {
-    setBoard(prev => {
-      if (!prev) return null;
-      const newLists = prev.lists.map(list => {
-        if (list._id === listId) {
-          return { ...list, cards: [...(list.cards || []), newCard] };
-        }
-        return list;
-      });
-      return { ...prev, lists: newLists };
-    });
-  };
   const handleUpdateListTitle = (listId, newTitle) => {
     axios.put(`/api/lists/${listId}`, { title: newTitle, boardId }).catch(console.error);
   };
@@ -308,6 +308,10 @@ const BoardView = () => {
     if (window.confirm('Delete this list and all its cards?')) {
       axios.delete(`/api/lists/${listId}`, { params: { boardId } }).catch(console.error);
     }
+  };
+
+  const handleUpdateCard = (cardId, updatedDetails) => {
+    axios.put(`/api/cards/${cardId}`, updatedDetails).catch(console.error);
   };
 
   const handleDragEnd = (event) => {
@@ -374,43 +378,52 @@ const BoardView = () => {
   if (error) return <div className="p-6 text-red-500">{error}</div>;
 
   return (
-    <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
-      <div className="relative flex flex-col h-screen bg-darker-bg text-white p-4 overflow-hidden">
-        <AnimatedBlobs />
-        <motion.header className="mb-4 sticky top-0 z-10 bg-gray-700 backdrop-blur-sm rounded-2xl p-3">
-          <nav className="flex justify-left gap-2 items-center">
-            <Link to="/boards" className="flex items-center gap-2 bg-black text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/10 transition">
-              <FiHome /><span className="hidden sm:inline">Boards</span>
-            </Link>
-            <h1 className="text-xl font-bold">{board?.title}</h1>
-          </nav>
-        </motion.header>
+    <>
+      <CardDetailsModal 
+        isOpen={!!selectedCard} 
+        onClose={() => setSelectedCard(null)} 
+        card={selectedCard}
+        onUpdateCard={handleUpdateCard}
+        boardId={boardId}
+      />
+      <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
+        <div className="relative flex flex-col h-screen bg-darker-bg text-white p-4 overflow-hidden">
+          <AnimatedBlobs />
+          <motion.header className="mb-4 sticky top-0 z-10 bg-gray-700 backdrop-blur-sm rounded-2xl p-3">
+            <nav className="flex justify-left gap-2 items-center">
+              <Link to="/boards" className="flex items-center gap-2 bg-black text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/10 transition">
+                <FiHome /><span className="hidden sm:inline">Boards</span>
+              </Link>
+              <h1 className="text-xl font-bold">{board?.title}</h1>
+            </nav>
+          </motion.header>
 
-        <main className="flex-1 overflow-x-auto">
-          <SortableContext items={board ? board.lists.map(l => l._id) : []} strategy={horizontalListSortingStrategy}>
-            <div className="flex gap-4 items-start">
-              {board && board.lists.map((list, i) => (
-                <SortableList
-                  key={list._id}
-                  list={list}
-                  color={listColors[i % listColors.length]}
-                  onUpdateListTitle={handleUpdateListTitle}
-                  onDeleteList={handleDeleteList}
-                >
-                  <SortableContext items={(list.cards || []).map(c => c._id)} strategy={verticalListSortingStrategy}>
-                    {(list.cards || []).map(card => (
-                      <SortableCard key={card._id} card={card} onDeleteCard={handleDeleteCard} />
-                    ))}
-                  </SortableContext>
-                  <AddCardForm listId={list._id} onCardCreated={handleCardCreated} />
-                </SortableList>
-              ))}
-              <AddListForm boardId={boardId} onListCreated={handleListCreated} />
-            </div>
-          </SortableContext>
-        </main>
-      </div>
-    </DndContext>
+          <main className="flex-1 overflow-x-auto">
+            <SortableContext items={board ? board.lists.map(l => l._id) : []} strategy={horizontalListSortingStrategy}>
+              <div className="flex gap-4 items-start">
+                {board && board.lists.map((list, i) => (
+                  <SortableList
+                    key={list._id}
+                    list={list}
+                    color={listColors[i % listColors.length]}
+                    onUpdateListTitle={handleUpdateListTitle}
+                    onDeleteList={handleDeleteList}
+                  >
+                    <SortableContext items={(list.cards || []).map(c => c._id)} strategy={verticalListSortingStrategy}>
+                      {(list.cards || []).map(card => (
+                        <SortableCard key={card._id} card={card} onDeleteCard={handleDeleteCard} onCardClick={setSelectedCard} />
+                      ))}
+                    </SortableContext>
+                    <AddCardForm listId={list._id} />
+                  </SortableList>
+                ))}
+                <AddListForm boardId={boardId} />
+              </div>
+            </SortableContext>
+          </main>
+        </div>
+      </DndContext>
+    </>
   );
 };
 
