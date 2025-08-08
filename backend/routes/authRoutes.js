@@ -40,4 +40,15 @@ router.get('/current_user',(req,res)=>{
     res.send(req.user);
 });
 
+
+router.get('/logout', (req, res, next) => {
+  req.logout((err) => {
+    if (err) {
+      return next(err);
+    }
+    // On success, redirect to the frontend landing page
+    res.redirect('http://localhost:5173/');
+  });
+});
+
 export default router;
