@@ -93,7 +93,7 @@ const SortableList = ({ list, color, children, onUpdateListTitle, onDeleteList }
 
   return (
     <div ref={setNodeRef} style={style} className="flex flex-col w-full md:w-72 flex-shrink-0">
-      <div className={`h-full flex flex-col ${color}/80 rounded-xl shadow-md backdrop-blur-sm`}>
+      <div className={`h-full flex flex-col ${color}/80 rounded-2xl shadow-md backdrop-blur-sm`}>
         {isEditingTitle ? (
           <div className="p-3 border-b border-gray-300">
             <input
@@ -102,7 +102,7 @@ const SortableList = ({ list, color, children, onUpdateListTitle, onDeleteList }
               onBlur={handleTitleBlur}
               onKeyDown={handleKeyDown}
               autoFocus
-              className="w-full text-sm font-semibold text-gray-800 focus:outline-none border border-primary-accent rounded-lg p-1"
+              className="w-full text-sm font-semibold text-gray-800 focus:outline-none border border-primary-accent rounded-2xl p-1"
             />
           </div>
         ) : (
@@ -114,10 +114,10 @@ const SortableList = ({ list, color, children, onUpdateListTitle, onDeleteList }
           {children}
         </div>
         <div className="border-t border-gray-300 p-2 flex items-center justify-evenly">
-          <button onClick={() => setIsEditingTitle(true)} className="flex items-center text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-700 p-1 rounded-xl">
+          <button onClick={() => setIsEditingTitle(true)} className="flex items-center text-sm text-gray-500  hover:text-black p-1 rounded-xl">
             <FiEdit2 className="mr-1" /> Edit
           </button>
-          <button onClick={() => onDeleteList(list._id)} className="flex items-center text-sm text-gray-500 hover:bg-red-100 hover:text-red-400 p-1 rounded-xl">
+          <button onClick={() => onDeleteList(list._id)} className="flex items-center text-sm text-gray-500  hover:text-red-600 p-1 rounded-xl">
             <FiTrash2 className="mr-1" /> Delete
           </button>
         </div>
@@ -126,7 +126,7 @@ const SortableList = ({ list, color, children, onUpdateListTitle, onDeleteList }
   );
 };
 
-/* ------------------------------- Add Forms (Corrected) ------------------------------ */
+/* ------------------------------- Add Forms ------------------------------ */
 const AddCardForm = ({ listId, onCardCreated }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
@@ -136,7 +136,7 @@ const AddCardForm = ({ listId, onCardCreated }) => {
     if (!title.trim()) return setIsEditing(false);
     try {
       const { data: newCard } = await axios.post('/api/cards', { title, listId });
-      onCardCreated(newCard, listId); // <-- Call the callback to update parent state
+      onCardCreated(newCard, listId);
       setTitle('');
       setIsEditing(false);
     } catch (error) {
@@ -146,7 +146,7 @@ const AddCardForm = ({ listId, onCardCreated }) => {
 
   if (!isEditing) {
     return (
-      <button onClick={() => setIsEditing(true)} className="text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-200 p-2 rounded-xl w-full">
+      <button onClick={() => setIsEditing(true)} className="text-sm text-gray-500 hover:text-black hover:bg-gray-200 p-2 rounded-4xl w-full">
         + Add a card
       </button>
     );
@@ -157,12 +157,12 @@ const AddCardForm = ({ listId, onCardCreated }) => {
       <textarea
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        className="w-full text-sm text-black p-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-accent resize-none"
+        className="w-full text-sm text-black p-2 rounded-2xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-accent resize-none"
         placeholder="Enter a title for this card..."
         autoFocus
       />
       <div className="flex items-center gap-2">
-        <button type="submit" className="bg-black text-gray-400 text-sm px-4 py-2 rounded-xl hover:bg-opacity-80 hover:text-white transition">
+        <button type="submit" className="bg-black text-gray-400 text-sm px-4 py-2 rounded-4xl hover:bg-opacity-80 hover:text-white transition">
           Add Card
         </button>
         <button type="button" onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-gray-700">
@@ -182,7 +182,7 @@ const AddListForm = ({ boardId, onListCreated }) => {
     if (!title.trim()) return setIsEditing(false);
     try {
       const { data: newList } = await axios.post('/api/lists', { title, boardId });
-      onListCreated(newList); // <-- Call the callback to update parent state
+      onListCreated(newList); 
       setTitle('');
       setIsEditing(false);
     } catch (error) {
@@ -192,7 +192,7 @@ const AddListForm = ({ boardId, onListCreated }) => {
 
   if (!isEditing) {
     return (
-      <button onClick={() => setIsEditing(true)} className="bg-white/10 hover:bg-white/20 text-gray-400 hover:text-white px-4 py-3 rounded-lg transition w-full md:w-72 text-left font-semibold">
+      <button onClick={() => setIsEditing(true)} className="bg-white/10 hover:bg-white/20 text-gray-400 hover:text-white px-4 py-3 rounded-4xl transition w-full md:w-72 text-left font-semibold">
         + Add another list
       </button>
     );
@@ -205,11 +205,11 @@ const AddListForm = ({ boardId, onListCreated }) => {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Enter list title..."
-          className="w-full p-2 rounded border border-gray-300 text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-accent"
+          className="w-full p-2 rounded-3xl border border-gray-300 text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-accent"
           autoFocus
         />
         <div className="flex items-center gap-2 mt-2">
-          <button type="submit" className="bg-black text-gray-400 px-4 py-2 rounded text-sm hover:text-white transition">
+          <button type="submit" className="bg-black text-gray-400 px-4 py-2 rounded-4xl text-sm hover:text-white transition">
             Add List
           </button>
           <button type="button" onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-gray-700">
@@ -316,11 +316,23 @@ const BoardView = () => {
   };
 
   const handleDeleteCard = (cardId, listId) => {
+    setBoard(prev => ({
+        ...prev,
+        lists: prev.lists.map(list => 
+            list._id === listId 
+            ? { ...list, cards: list.cards.filter(c => c._id !== cardId) } 
+            : list
+        )
+    }));
     axios.delete(`/api/cards/${cardId}`, { params: { boardId, listId } }).catch(console.error);
   };
 
   const handleDeleteList = (listId) => {
     if (window.confirm('Delete this list and all its cards?')) {
+      setBoard(prev => ({
+          ...prev,
+          lists: prev.lists.filter(l => l._id !== listId)
+      }));
       axios.delete(`/api/lists/${listId}`, { params: { boardId } }).catch(console.error);
     }
   };
@@ -406,11 +418,12 @@ const BoardView = () => {
           <AnimatedBlobs />
           <motion.header className="mb-4 sticky top-0 z-10 bg-gray-700 backdrop-blur-sm rounded-2xl p-3">
             <nav className="flex justify-left gap-2 items-center">
-              <Link to="/boards" className="flex items-center gap-2 bg-black text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/10 transition">
+              <Link to="/boards" className="flex items-center gap-2 bg-[#111e2b] text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/10 transition">
                 <FiHome /><span className="hidden sm:inline">Boards</span>
               </Link>
               <h1 className="text-xl font-bold">{board?.title}</h1>
             </nav>
+            
           </motion.header>
 
           <main className="flex-1 overflow-x-auto">
