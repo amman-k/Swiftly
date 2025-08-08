@@ -52,26 +52,22 @@ const moveCard = async (req, res) => {
   }
 
   try {
-    // Step 1: Atomically remove the card's ID from the source list's 'cards' array.
     const updatedSourceList = await List.findByIdAndUpdate(
       sourceListId,
       { $pull: { cards: cardId } },
       { new: true }
     );
 
-    // Step 2: Atomically add the card's ID to the destination list's 'cards' array.
     const updatedDestList = await List.findByIdAndUpdate(
       destListId,
       { $addToSet: { cards: cardId } },
       { new: true }
     );
 
-    // Step 3: Update the 'list' field on the Card document itself.
     if (sourceListId !== destListId) {
       await Card.findByIdAndUpdate(cardId, { list: destListId });
     }
 
-    // Step 4: Emit WebSocket events to update all clients.
     const io = req.io;
     if (io) {
       if (updatedSourceList) {
@@ -126,4 +122,32 @@ const deleteCard = async (req, res) => {
   }
 };
 
-export { createCard, moveCard, deleteCard };
+/**
+ * @desc    Update a card's title and/or description
+ * @route   PUT /api/cards/:cardId
+ * @access  Private
+ */
+
+const updateCard = async (req, res) => {
+  const { cardId } = req.params;
+  const { title, description, boardId } = req.body;
+  try {
+    const card = await Card.findById(cardId);
+    if (!card) {
+      return res.status(404).json({ message: "Card not found." });
+    }
+
+    card.title = title ?? card.title;
+    card.description = description ?? card.description;
+    const updatedCard = await card.save();
+
+    req.io.to(boardId).emit("cardUpdated", { updatedCard });
+
+    res.status(200).json(updatedCard);
+  } catch (error) {
+    console.error("Error updating card:", error);
+    res.status(500).json({ message: "Server Error: Could not update card." });
+  }
+};
+
+export { createCard, moveCard, deleteCard, updateCard };
