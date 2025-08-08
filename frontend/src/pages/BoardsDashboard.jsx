@@ -17,7 +17,7 @@ const DashboardNavbar = ({ user }) => {
           <img src={user.avatar} alt="User Avatar" className="w-10 h-10 rounded-full" />
           <a 
             href="/auth/logout"
-            className="flex items-center gap-2 text-gray-300 hover:text-white border border-gray-600 hover:bg-red-600 hover:border-red-600 font-semibold py-2 px-4 rounded transition-all duration-200"
+            className="flex items-center gap-2 text-gray-400 hover:text-white border border-gray-600 hover:bg-red-600 hover:border-red-600 font-semibold py-2 px-4 rounded-4xl transition-all duration-200"
           >
             <FiLogOut />
             <span>Logout</span>
@@ -52,7 +52,7 @@ const CreateBoardModal = ({ isOpen, onClose, onCreate }) => {
             initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -50, opacity: 0 }}
-            className="bg-[#2E3944] rounded-lg p-8 shadow-xl w-full max-w-md relative"
+            className="bg-[#2E3944] rounded-4xl p-8 shadow-xl w-full max-w-md relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">
@@ -65,12 +65,12 @@ const CreateBoardModal = ({ isOpen, onClose, onCreate }) => {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter board title..."
-                className="w-full p-3 rounded-lg bg-gray-200 text-[#212A31] focus:outline-none focus:ring-2 focus:ring-[#124E66]"
+                className="w-full p-3 rounded-2xl bg-gray-200 text-[#212A31] focus:outline-none focus:ring-2 focus:ring-[#124E66]"
                 autoFocus
               />
               <button
                 type="submit"
-                className="w-full mt-6 bg-[#124E66] hover:bg-opacity-80 text-white font-bold py-3 px-4 rounded-lg transition-colors"
+                className="w-full mt-6 bg-[#124E66] hover:bg-opacity-80 text-gray-400 hover:text-white font-bold py-3 px-4 rounded-4xl transition-colors"
               >
                 Create Board
               </button>
@@ -107,8 +107,8 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, boardTitle }) => {
                     <h3 className="text-2xl font-semibold mt-4 text-white">Delete "{boardTitle}"?</h3>
                     <p className="text-gray-400 mt-2">Are you sure? All lists and cards will be permanently removed. This action cannot be undone.</p>
                     <div className="mt-6 flex justify-center gap-4">
-                        <button onClick={onClose} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">Cancel</button>
-                        <button onClick={onConfirm} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">Delete</button>
+                        <button onClick={onClose} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-4xl transition-colors">Cancel</button>
+                        <button onClick={onConfirm} className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-4xl transition-colors">Delete</button>
                     </div>
                 </motion.div>
             </motion.div>
@@ -116,7 +116,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, boardTitle }) => {
     );
 };
 
-// --- NEW: Edit Board Modal ---
+
 const EditBoardModal = ({ board, isOpen, onClose, onUpdate }) => {
     const [title, setTitle] = useState(board?.title || '');
 
@@ -150,7 +150,7 @@ const EditBoardModal = ({ board, isOpen, onClose, onUpdate }) => {
                     initial={{ y: -50, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: -50, opacity: 0 }}
-                    className="bg-[#2E3944] rounded-lg p-8 shadow-xl w-full max-w-md relative"
+                    className="bg-[#2E3944] rounded-4xl p-8 shadow-xl w-full max-w-md relative"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">
@@ -162,12 +162,12 @@ const EditBoardModal = ({ board, isOpen, onClose, onUpdate }) => {
                             type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            className="w-full p-3 rounded-lg bg-gray-200 text-[#212A31] focus:outline-none focus:ring-2 focus:ring-[#124E66]"
+                            className="w-full p-3 rounded-2xl bg-gray-200 text-[#212A31] focus:outline-none focus:ring-2 focus:ring-[#124E66]"
                             autoFocus
                         />
                         <button
                             type="submit"
-                            className="w-full mt-6 bg-[#124E66] hover:bg-opacity-80 text-white font-bold py-3 px-4 rounded-lg transition-colors"
+                            className="w-full mt-6 bg-[#124E66] hover:bg-opacity-80 text-gray-400 hover:text-white font-bold py-3 px-4 rounded-4xl transition-colors"
                         >
                             Save Changes
                         </button>
@@ -181,12 +181,12 @@ const EditBoardModal = ({ board, isOpen, onClose, onUpdate }) => {
 
 const EmptyState = ({ onOpenCreateModal }) => {
     return (
-        <div className="text-center py-16 border-2 border-dashed border-gray-600 rounded-lg">
-            <h2 className="text-2xl font-semibold text-gray-300">Welcome to Swiftly!</h2>
-            <p className="text-gray-400 mt-2">You don't have any boards yet. Get started by creating one.</p>
+        <div className="text-center py-16 border-2 border-dashed border-gray-600 rounded-4xl">
+            <h2 className="text-2xl font-semibold text-gray-200">Welcome to Swiftly!</h2>
+            <p className="text-gray-300 mt-2">You don't have any boards yet. Get started by creating one.</p>
             <button 
                 onClick={onOpenCreateModal}
-                className="mt-6 bg-primary-accent hover:bg-opacity-80 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors"
+                className="mt-6 bg-black hover:bg-opacity-80 text-gray-400 hover:text-white font-bold py-3 px-6 rounded-4xl shadow-md transition-colors"
             >
                 Create Your First Board
             </button>
@@ -246,12 +246,12 @@ const BoardsDashboard = () => {
     }
   };
 
-  // --- NEW: Handler for updating a board ---
+  
   const handleUpdateBoard = async (boardId, newTitle) => {
     try {
         const { data: updatedBoard } = await axios.put(`/api/boards/${boardId}`, { title: newTitle });
         setBoards(prevBoards => prevBoards.map(board => board._id === boardId ? updatedBoard : board));
-        setBoardToEdit(null); // Close the modal
+        setBoardToEdit(null); 
     } catch (err) {
         console.error("Failed to update board:", err);
     }
@@ -295,7 +295,7 @@ const BoardsDashboard = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {boards.map((board) => (
                     <div key={board._id} className="relative group">
-                      <Link to={`/board/${board._id}`} className="block bg-[#D3D9D4] text-[#212A31] p-4 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer h-full">
+                      <Link to={`/board/${board._id}`} className="block bg-[#D3D9D4] text-[#212A31] p-4 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer h-full">
                         <h2 className="font-bold text-xl">{board.title}</h2>
                       </Link>
                       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -316,7 +316,7 @@ const BoardsDashboard = () => {
                   ))}
                   <button 
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="bg-[#124E66] hover:bg-opacity-80 text-white font-bold p-4 rounded-lg shadow-md transition-colors border-2 border-dashed border-gray-400 hover:border-white flex flex-col items-center justify-center gap-2"
+                    className="bg-[#212121] hover:bg-opacity-80 text-gray-400 hover:text-white font-bold p-4 rounded-2xl shadow-md transition-colors border-2 border-dashed border-gray-400 hover:border-white flex flex-col items-center justify-center gap-2"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
