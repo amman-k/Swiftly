@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { FaUsers, FaArrowsAlt } from "react-icons/fa";
 import { FiZap, FiMenu } from "react-icons/fi";
 import { IoSparkles } from "react-icons/io5";
+import { FaLinkedin,FaGithub } from "react-icons/fa";
 
 const LandingPage = () => {
   const [projectGoal, setProjectGoal] = useState("");
@@ -115,11 +116,10 @@ const LandingPage = () => {
         <nav className="container mx-auto flex justify-between items-center">
           <div className="text-2xl font-bold">Swiftly</div>
           <div className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="hover:text-gray-300 transition-colors">Features</a>
             <a href="http://localhost:5001/auth/google" className="hover:text-gray-300 transition-colors">Sign In</a>
             <motion.a 
               href="http://localhost:5001/auth/google" 
-              className={`${styles.primaryAccent} px-6 py-2 rounded-lg font-semibold`}
+              className={`${styles.primaryAccent} px-6 py-2 rounded-3xl font-semibold`}
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             >
               Get Started
@@ -151,7 +151,7 @@ const LandingPage = () => {
           >
             <motion.a 
               href="http://localhost:5001/auth/google" 
-              className={`${styles.primaryAccent} text-lg font-semibold px-10 py-4 rounded-lg shadow-lg inline-block`}
+              className={`${styles.primaryAccent} text-lg font-semibold px-10 py-4 rounded-4xl shadow-lg inline-block`}
               whileHover={{ scale: 1.05, y: -5 }} whileTap={{ scale: 0.95 }}
             >
               Get Started - It's Free
@@ -202,11 +202,11 @@ const LandingPage = () => {
                     <input
                         type="text" value={projectGoal} onChange={(e) => setProjectGoal(e.target.value)}
                         placeholder="e.g., Launch a new marketing campaign for Q4"
-                        className={`w-full p-4 rounded-lg ${styles.darkText} bg-gray-200 focus:outline-none focus:ring-2 focus:ring-[#124E66]`}
+                        className={`w-full p-4 rounded-4xl ${styles.darkText} bg-gray-200 focus:outline-none focus:ring-2 focus:ring-[#124E66]`}
                     />
                     <motion.button
                         onClick={handleGeneratePlan} disabled={isLoading}
-                        className={`${styles.primaryAccent} text-lg font-semibold px-8 py-4 rounded-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2`}
+                        className={`${styles.primaryAccent} text-lg font-semibold px-8 py-4 rounded-4xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2`}
                         whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                     >
                         {isLoading ? 'Generating...' : <><IoSparkles /> Generate Plan</>}
@@ -223,7 +223,7 @@ const LandingPage = () => {
                                 <h3 className="font-bold text-xl mb-4">{list.title}</h3>
                                 <motion.div variants={staggerContainer} className="space-y-3">
                                     {list.cards.map((card) => (
-                                        <motion.div key={card} variants={fadeIn} className="bg-white p-3 rounded-md shadow">
+                                        <motion.div key={card} variants={fadeIn} className="bg-white p-3 rounded-xl shadow">
                                             {card}
                                         </motion.div>
                                     ))}
@@ -236,11 +236,17 @@ const LandingPage = () => {
         </motion.section>
       </main>
 
-      <footer className={`text-center py-8 text-gray-400 border-t ${styles.secondaryBorders}`}>
-          <div className="container mx-auto">
-            <p>&copy; {new Date().getFullYear()} Swiftly. All rights reserved.</p>
-          </div>
-      </footer>
+     <footer className={`text-center py-8 text-gray-400 border-t ${styles.secondaryBorders}`}>
+  <div className="container mx-auto flex justify-between items-center">
+    <div className="w-full text-center">
+      <p>&copy; {new Date().getFullYear()} Swiftly. All rights reserved.</p>
+    </div>
+    <div className="absolute right-8 flex space-x-4 text-right">
+      <a href="https://www.linkedin.com" target="_blank"><FaLinkedin/></a>
+      <a href="https://github.com/amman-k" target="_blank"><FaGithub/></a>
+    </div>
+  </div>
+</footer>
     </>
   );
 };
