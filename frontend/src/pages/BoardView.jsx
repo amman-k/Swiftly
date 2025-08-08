@@ -104,10 +104,10 @@ const SortableList = ({ list, color, children, onUpdateListTitle, onDeleteList }
           {children}
         </div>
         <div className="border-t border-gray-300 p-2 flex items-center justify-evenly">
-          <button onClick={() => setIsEditingTitle(true)} className="flex items-center text-sm text-gray-500  hover:text-black p-1 rounded-xl">
+          <button onClick={() => setIsEditingTitle(true)} className="flex items-center text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-700 p-1 rounded-xl">
             <FiEdit2 className="mr-1" /> Edit
           </button>
-          <button onClick={() => onDeleteList(list._id)} className="flex items-center text-sm text-gray-500  hover:text-red-400 p-1 rounded-xl">
+          <button onClick={() => onDeleteList(list._id)} className="flex items-center text-sm text-gray-500 hover:bg-red-100 hover:text-red-400 p-1 rounded-xl">
             <FiTrash2 className="mr-1" /> Delete
           </button>
         </div>
@@ -116,8 +116,8 @@ const SortableList = ({ list, color, children, onUpdateListTitle, onDeleteList }
   );
 };
 
-/* ------------------------------- Add Forms ------------------------------ */
-const AddCardForm = ({ listId }) => {
+/* ------------------------------- Add Forms (Corrected) ------------------------------ */
+const AddCardForm = ({ listId, onCardCreated }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
 
@@ -125,7 +125,8 @@ const AddCardForm = ({ listId }) => {
     e.preventDefault();
     if (!title.trim()) return setIsEditing(false);
     try {
-      await axios.post('/api/cards', { title, listId });
+      const { data: newCard } = await axios.post('/api/cards', { title, listId });
+      onCardCreated(newCard, listId); // <-- Call the callback to update parent state
       setTitle('');
       setIsEditing(false);
     } catch (error) {
@@ -162,7 +163,7 @@ const AddCardForm = ({ listId }) => {
   );
 };
 
-const AddListForm = ({ boardId }) => {
+const AddListForm = ({ boardId, onListCreated }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
 
@@ -170,7 +171,8 @@ const AddListForm = ({ boardId }) => {
     e.preventDefault();
     if (!title.trim()) return setIsEditing(false);
     try {
-      await axios.post('/api/lists', { title, boardId });
+      const { data: newList } = await axios.post('/api/lists', { title, boardId });
+      onListCreated(newList); // <-- Call the callback to update parent state
       setTitle('');
       setIsEditing(false);
     } catch (error) {
@@ -180,7 +182,7 @@ const AddListForm = ({ boardId }) => {
 
   if (!isEditing) {
     return (
-      <button onClick={() => setIsEditing(true)} className="bg-white/10 hover:bg-white/20 text-gray-400 hover:text-white px-4 py-3 rounded-xl transition w-full md:w-72 text-left font-semibold">
+      <button onClick={() => setIsEditing(true)} className="bg-white/10 hover:bg-white/20 text-gray-400 hover:text-white px-4 py-3 rounded-lg transition w-full md:w-72 text-left font-semibold">
         + Add another list
       </button>
     );
@@ -281,6 +283,19 @@ const BoardView = () => {
     };
   }, [boardId]);
 
+  const handleListCreated = (newList) => setBoard(prev => ({ ...prev, lists: [...prev.lists, newList] }));
+  const handleCardCreated = (newCard, listId) => {
+    setBoard(prev => {
+      if (!prev) return null;
+      const newLists = prev.lists.map(list => {
+        if (list._id === listId) {
+          return { ...list, cards: [...(list.cards || []), newCard] };
+        }
+        return list;
+      });
+      return { ...prev, lists: newLists };
+    });
+  };
   const handleUpdateListTitle = (listId, newTitle) => {
     axios.put(`/api/lists/${listId}`, { title: newTitle, boardId }).catch(console.error);
   };
@@ -387,10 +402,10 @@ const BoardView = () => {
                       <SortableCard key={card._id} card={card} onDeleteCard={handleDeleteCard} />
                     ))}
                   </SortableContext>
-                  <AddCardForm listId={list._id} />
+                  <AddCardForm listId={list._id} onCardCreated={handleCardCreated} />
                 </SortableList>
               ))}
-              <AddListForm boardId={boardId} />
+              <AddListForm boardId={boardId} onListCreated={handleListCreated} />
             </div>
           </SortableContext>
         </main>
