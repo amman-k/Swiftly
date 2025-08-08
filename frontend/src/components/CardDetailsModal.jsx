@@ -6,12 +6,11 @@ const CardDetailsModal = ({ card, isOpen, onClose, onUpdateCard, boardId }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
-  // --- CORRECTED: This useEffect now correctly updates the state ---
-  // It runs every time the 'card' prop changes.
+
   useEffect(() => {
     if (card) {
       setTitle(card.title);
-      setDescription(card.description || ''); // Use description from the card, or an empty string
+      setDescription(card.description || ''); 
     }
   }, [card]);
 
@@ -45,29 +44,29 @@ const CardDetailsModal = ({ card, isOpen, onClose, onUpdateCard, boardId }) => {
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-gray-100 rounded-lg p-6 shadow-2xl w-full max-w-2xl text-gray-800"
+          className="bg-[#2e3944] rounded-4xl p-6 shadow-2xl w-full max-w-2xl text-gray-800"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-start mb-4">
-            <FiFileText size={24} className="mr-3 mt-1 text-gray-500" />
+            <FiFileText size={24} className="mr-3 mt-1 text-white" />
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full text-2xl font-bold bg-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-accent rounded-md p-1 -ml-1"
+              className="w-full text-2xl text-white font-bold bg-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-accent rounded-md p-1 -ml-1"
             />
-            <button onClick={onClose} className="ml-4 text-gray-400 hover:text-gray-700"><FiX size={24} /></button>
+            <button onClick={onClose} className="ml-4 text-gray-400 hover:text-white"><FiX size={24} /></button>
           </div>
 
           {/* Description */}
           <div className="ml-9">
-            <h3 className="font-semibold mb-2">Description</h3>
+            <h3 className="font-semibold mb-2 text-white">Description</h3>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add a more detailed description..."
-              className="w-full p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-accent"
+              className="w-full p-2 text-white rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-accent"
               rows="4"
             />
           </div>
@@ -76,7 +75,7 @@ const CardDetailsModal = ({ card, isOpen, onClose, onUpdateCard, boardId }) => {
           <div className="flex justify-end mt-6 ml-9">
             <button 
               onClick={handleSave}
-              className="bg-primary-accent hover:bg-opacity-80 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+              className="bg-[#111e2b] hover:bg-opacity-80 text-gray-400 hover:text-white font-bold py-2 px-6 rounded-4xl transition-colors"
             >
               Save
             </button>
