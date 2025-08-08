@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { FiLogOut, FiX } from 'react-icons/fi';
+import { FiLogOut, FiX, FiTrash2 } from 'react-icons/fi';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -13,8 +13,8 @@ const DashboardNavbar = ({ user }) => {
       <nav className="container mx-auto flex justify-between items-center">
         <div className="text-2xl font-bold text-white">Swiftly</div>
         <div className="flex items-center gap-4">
-          <span className="text-white font-semibold">{user?.name || 'User'}</span>
-          <img src={user?.avatar} alt="User Avatar" className="w-10 h-10 rounded-full" />
+          <span className="text-white font-semibold">{user.name}</span>
+          <img src={user.avatar} alt="User Avatar" className="w-10 h-10 rounded-full" />
           <a 
             href="/auth/logout"
             className="flex items-center gap-2 text-gray-300 hover:text-white border border-gray-600 hover:bg-red-600 hover:border-red-600 font-semibold py-2 px-4 rounded transition-all duration-200"
@@ -92,15 +92,10 @@ const BoardsDashboard = () => {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // --- DIAGNOSTIC LOG ---
-  console.log("User object from context:", user);
-
   useEffect(() => {
     const fetchBoards = async () => {
       try {
         const { data } = await axios.get('/api/boards');
-        // --- DIAGNOSTIC LOG ---
-        console.log("Fetched boards data:", data);
         setBoards(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Error fetching boards:', err);
@@ -110,10 +105,10 @@ const BoardsDashboard = () => {
         setLoading(false);
       }
     };
-    if (user) { // Only fetch boards if the user exists
+    if (user) {
         fetchBoards();
     } else {
-        setLoading(false); // If no user, stop loading
+        setLoading(false);
     }
   }, [user]);
 
@@ -126,6 +121,24 @@ const BoardsDashboard = () => {
       console.error('Error creating board:', err);
     }
   };
+
+  // --- NEW: Handler for deleting a board ---
+  const handleDeleteBoard = async (boardId, event) => {
+    event.preventDefault(); // Prevent the Link from navigating
+    event.stopPropagation(); // Stop the event from bubbling up
+
+    if (window.confirm("Are you sure you want to delete this board and all its content? This action cannot be undone.")) {
+        try {
+            await axios.delete(`/api/boards/${boardId}`);
+            // Optimistic UI update: remove the board from the state
+            setBoards(prevBoards => prevBoards.filter(board => board._id !== boardId));
+        } catch (err) {
+            console.error("Failed to delete board:", err);
+            // Optionally, show an error message to the user
+        }
+    }
+  };
+
 
   if (!user) {
     return null; 
@@ -149,10 +162,16 @@ const BoardsDashboard = () => {
           {!loading && !error && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {boards.map((board) => (
-                <Link to={`/board/${board._id}`} key={board._id}>
+                <Link to={`/board/${board._id}`} key={board._id} className="relative group">
                   <div className="bg-[#D3D9D4] text-[#212A31] p-4 rounded-lg shadow-md hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer h-full">
                     <h2 className="font-bold text-xl">{board.title}</h2>
                   </div>
+                  <button 
+                    onClick={(e) => handleDeleteBoard(board._id, e)}
+                    className="absolute top-2 right-2 p-1.5 text-gray-500 hover:text-red-600 bg-white/50 hover:bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <FiTrash2 size={16} />
+                  </button>
                 </Link>
               ))}
               <button 
