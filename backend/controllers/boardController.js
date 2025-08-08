@@ -102,7 +102,7 @@ const reorderLists = async (req, res) => {
  */
 
 const deleteBoard = async (req, res) => {
-  const { boardId } = req.params;
+  const { id:boardId } = req.params;
   try {
     const board = await Board.findOne({ _id: boardId, owner: req.user.id });
     if (!board) {
