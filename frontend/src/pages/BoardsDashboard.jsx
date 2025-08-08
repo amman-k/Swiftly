@@ -4,6 +4,7 @@ import { FiLogOut, FiX, FiTrash2, FiEdit2 } from 'react-icons/fi';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 // --- Reusable Components ---
 
@@ -33,7 +34,10 @@ const CreateBoardModal = ({ isOpen, onClose, onCreate }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      toast.error("Title cannot be empty");
+      return;
+    }
     onCreate(title);
     setTitle('');
   };
@@ -130,9 +134,13 @@ const EditBoardModal = ({ board, isOpen, onClose, onUpdate }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!title.trim() || title === board.title) {
-            onClose();
+        if (!title.trim()) {
+          toast.error("Title cannot be empty.");
             return;
+        }
+        if(title===board.title){
+          onClose();
+          return;
         }
         onUpdate(board._id, title);
     };
@@ -229,9 +237,11 @@ const BoardsDashboard = () => {
     try {
       const { data: newBoard } = await axios.post('/api/boards', { title });
       setBoards(prevBoards => [...prevBoards, newBoard]);
+      toast.success("Board Created Successfully");
       setIsCreateModalOpen(false);
     } catch (err) {
       console.error('Error creating board:', err);
+      toast.error("Error creating Board");
     }
   };
 
@@ -241,8 +251,10 @@ const BoardsDashboard = () => {
         await axios.delete(`/api/boards/${boardToDelete._id}`);
         setBoards(prevBoards => prevBoards.filter(board => board._id !== boardToDelete._id));
         setBoardToDelete(null);
+        toast.success("Board Deleted Successfully")
     } catch (err) {
         console.error("Failed to delete board:", err);
+        toast.error("Error Deleting Board")
     }
   };
 
@@ -251,9 +263,11 @@ const BoardsDashboard = () => {
     try {
         const { data: updatedBoard } = await axios.put(`/api/boards/${boardId}`, { title: newTitle });
         setBoards(prevBoards => prevBoards.map(board => board._id === boardId ? updatedBoard : board));
-        setBoardToEdit(null); 
+        setBoardToEdit(null);
+        toast.success("Board Updated Successfully");
     } catch (err) {
         console.error("Failed to update board:", err);
+        toast.error("Error Updating Board");
     }
   };
 
