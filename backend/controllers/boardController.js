@@ -102,7 +102,7 @@ const reorderLists = async (req, res) => {
  */
 
 const deleteBoard = async (req, res) => {
-  const { id:boardId } = req.params;
+  const { id: boardId } = req.params;
   try {
     const board = await Board.findOne({ _id: boardId, owner: req.user.id });
     if (!board) {
@@ -126,4 +126,40 @@ const deleteBoard = async (req, res) => {
   }
 };
 
-export { getBoards, createBoard, getBoardById, reorderLists, deleteBoard };
+/**
+ * @desc    Update a board's title
+ * @route   PUT /api/boards/:id
+ * @access  Private
+ */
+const updateBoard = async (req, res) => {
+  const { id: boardId } = req.params;
+  const { title } = req.body;
+  if (!title) {
+    return res.status(400).json({ message: "Title is required" });
+  }
+  try {
+    const updatedBoard = await Board.findOneAndUpdate(
+      { _id: boardId, owner: req.user.id },
+      { $set: { title } },
+      { new: true }
+    );
+    if (!updatedBoard) {
+      return res
+        .status(404)
+        .json({ message: "Board not found or you are not authorized." });
+    }
+    res.status(200).json(updatedBoard);
+  } catch (error) {
+    console.error("Error updating board:", error);
+    res.status(500).json({ message: "Server Error: Could not update board." });
+  }
+};
+
+export {
+  getBoards,
+  createBoard,
+  getBoardById,
+  reorderLists,
+  deleteBoard,
+  updateBoard,
+};
