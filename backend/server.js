@@ -99,9 +99,9 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use('/auth', authRoutes);
 
-// app.use('/api/boards', boardRoutes);
-// app.use('/api/lists', listRoutes);
-// app.use('/api/cards',cardRoutes);
+app.use('/api/boards', boardRoutes);
+app.use('/api/lists', listRoutes);
+app.use('/api/cards',cardRoutes);
 
 app.get('/', (req, res) => {
     res.send('Swiftly API is running...');
