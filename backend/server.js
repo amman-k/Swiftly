@@ -12,6 +12,7 @@ import authRoutes from './routes/authRoutes.js';
 import boardRoutes from './routes/boardRoutes.js';
 import listRoutes from './routes/listRoutes.js';
 import cardRoutes from './routes/cardRoutes.js';
+import path from 'path';
 
 dotenv.config();
 
@@ -86,6 +87,15 @@ app.use((req, res, next) => {
     req.io = io;
     next();
 });
+
+if (process.env.NODE_ENV === 'production') {
+    const __dirname = path.resolve();
+    app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+    app.get('*', (req, res) => {
+        res.sendFile(path.resolve(__dirname, '../frontend', 'dist', 'index.html'));
+    });
+}
 
 app.use('/auth', authRoutes);
 app.use('/api/boards', boardRoutes);
