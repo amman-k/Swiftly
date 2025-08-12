@@ -31,6 +31,11 @@ app.use(cors({
 }));
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.log(`Request URL: ${req.originalUrl}`);
+  console.log(`Request Params: ${JSON.stringify(req.params)}`);
+  next();
+});
 
 if (!process.env.SESSION_SECRET) {
     console.error("FATAL ERROR: SESSION_SECRET is not defined in the .env file.");
@@ -87,6 +92,7 @@ app.use((req, res, next) => {
     req.io = io;
     next();
 });
+
 
 if (process.env.NODE_ENV === 'production') {
     const __dirname = path.resolve();
